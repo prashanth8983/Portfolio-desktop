@@ -77,6 +77,11 @@ export const MacDesktop: React.FC<MacDesktopProps> = ({ apps, dockItems }) => {
     setWindows([...windows, newWindow]);
     setNextZIndex(nextZIndex + 1);
   };
+  
+  const handleIconDoubleClick = (icon: DesktopIconType) => {
+    if (icon.type === 'pdf' && icon.content) openWindow('pdf', icon.name, icon.content);
+    else if (icon.type === 'app' && icon.id === 'finder') openWindow('finder', 'Finder', undefined, 'finder-dock');
+  };
 
   const handleDockItemClick = (id: string) => {
     const fullscreenWindow = windows.find((w) => w.dockId === id && w.isFullscreen);
@@ -102,11 +107,6 @@ export const MacDesktop: React.FC<MacDesktopProps> = ({ apps, dockItems }) => {
 
   const handleMinimizeAll = () => {
     setWindows(windows.map((w) => ({ ...w, isMinimized: true })));
-  };
-
-  const handleIconDoubleClick = (icon: DesktopIconType) => {
-    if (icon.type === 'pdf' && icon.content) openWindow('pdf', icon.name, icon.content);
-    else if (icon.type === 'app' && icon.id === 'finder') openWindow('finder', 'Finder', undefined, 'finder-dock');
   };
 
   const focusWindow = (id: string) => {

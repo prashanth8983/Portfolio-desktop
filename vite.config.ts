@@ -6,5 +6,4 @@ export default defineConfig({
   plugins: [react(), 
     tailwindcss()
   ],
-  base: '/Portfolio-desktop/'
 });

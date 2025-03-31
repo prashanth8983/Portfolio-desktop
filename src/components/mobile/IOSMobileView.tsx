@@ -69,7 +69,7 @@ export const IOSMobileView: React.FC<IOSMobileViewProps> = ({ apps }) => {
   return (
     <div
       className="w-screen h-screen bg-cover bg-center flex flex-col overflow-hidden font-sans"
-      style={{ backgroundImage: "url('/src/assets/ios_wallpaper.jpg')" }}
+      style={{ backgroundImage: "url('./ios_wallpaper.jpg')" }}
     >
       {/* Status Bar */}
       <div className="flex justify-between items-center h-8 bg-transparent text-white px-4 text-xs pt-1">

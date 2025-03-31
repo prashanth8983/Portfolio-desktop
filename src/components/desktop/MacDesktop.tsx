@@ -182,7 +182,7 @@ export const MacDesktop: React.FC<MacDesktopProps> = ({ apps, dockItems }) => {
   return (
     <div
       className="w-screen h-screen bg-cover bg-center relative overflow-hidden font-sans"
-      style={{ backgroundImage: "url('src/assets/wallpaper.jpg')" }}
+      style={{ backgroundImage: "url('./wallpaper.jpg')" }}
       onMouseMove={(e) => {
         if (draggingIcon) handleMouseMove(e);
         if (draggingWindow || resizingWindow) handleWindowMouseMove(e);

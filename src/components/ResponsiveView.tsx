@@ -18,7 +18,6 @@ const ResponsiveView: React.FC = () => {
     { id: 'trash', name: 'Trash', icon: 'trash', type: 'app', position: { x: 20, y: 100 } },
     { id: 'documents', name: 'Documents', icon: 'folder', type: 'folder', position: { x: 20, y: 180 } },
     { id: 'sample-pdf', name: 'Prashanth Kumar.pdf', icon: 'pdf', type: 'pdf', position: { x: 20, y: 260 }, content: './resume.pdf'  },
-    { id: 'report-pdf', name: 'Report.pdf', icon: 'pdf', type: 'pdf', position: { x: 120, y: 260 }, content: 'https://mozilla.github.io/pdf.js/web/compressed.tracemonkey-pldi-09.pdf#toolbar=1' },
   ];
 
   const dockIconSize = 32;

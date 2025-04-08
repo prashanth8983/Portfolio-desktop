@@ -93,7 +93,7 @@ export const MacDesktop: React.FC<MacDesktopProps> = ({ apps, dockItems }) => {
     } else {
       if (id === 'chrome') openWindow('browser', 'Chrome', undefined, 'chrome');
       else if (id === 'finder-dock') openWindow('finder', 'Finder', undefined, 'finder-dock');
-      else if (id === 'preview') openWindow('pdf', 'resume.pdf', '/resume.pdf', 'preview');
+      else if (id === 'preview') openWindow('pdf', 'resume.pdf', '/Resume.pdf', 'preview');
       else openWindow('other', dockItems.find((item) => item.id === id)?.name || 'Window', undefined, id);
     }
   };

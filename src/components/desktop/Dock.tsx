@@ -44,7 +44,7 @@ export const Dock: React.FC<DockProps> = ({
     <div className="fixed bottom-2 left-0 right-0 flex justify-center items-end z-40 h-[60px] pointer-events-none">
       <div 
         className={`
-          bg-white/10 backdrop-blur-lg rounded-xl p-1.5 
+          bg-white/20 backdrop-blur-lg rounded-xl p-1.5 
           flex items-end space-x-1 shadow-lg 
           border border-white/15 pointer-events-auto
           transition-all duration-300 ease-in-out

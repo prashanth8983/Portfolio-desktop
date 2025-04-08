@@ -57,11 +57,6 @@ const ResponsiveView: React.FC = () => {
       iconElement: <IoImagesOutline size={dockIconSize} className="text-blue-400" />,
     },
     {
-      id: 'messages',
-      name: 'Messages',
-      iconElement: <IoChatbubbleEllipsesSharp size={dockIconSize} className="text-green-500" />,
-    },
-    {
       id: 'music',
       name: 'Music',
       iconElement: <SiApplemusic size={dockIconSize} className="text-red-500" />,

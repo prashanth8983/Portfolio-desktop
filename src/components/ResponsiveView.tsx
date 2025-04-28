@@ -8,7 +8,6 @@ import {
   IoFolderOpenOutline, // Finder approximation
   IoMail,             // Mail
   IoImagesOutline,    // Preview approximation
-  IoChatbubbleEllipsesSharp, // Messages
   IoSettingsSharp,    // System Preferences/Settings
   IoTrashBin,         // Trash
 } from 'react-icons/io5';

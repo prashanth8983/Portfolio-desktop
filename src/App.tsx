@@ -1,10 +1,13 @@
 import React from 'react';
 import ResponsiveView from './components/ResponsiveView';
+import { ThemeProvider } from './contexts/ThemeContext';
 
 const App: React.FC = () => {
 
   return (
-     <ResponsiveView />
+    <ThemeProvider>
+      <ResponsiveView />
+    </ThemeProvider>
   )
 };
 

@@ -6,9 +6,10 @@ interface DesktopIconProps {
   icon: DesktopIconType;
   onMouseDown: (id: string, e: React.MouseEvent) => void;
   onDoubleClick: (icon: DesktopIconType) => void;
+  onRightClick?: (icon: DesktopIconType, e: React.MouseEvent) => void;
 }
 
-export const DesktopIcon: React.FC<DesktopIconProps> = ({ icon, onMouseDown, onDoubleClick }) => {
+export const DesktopIcon: React.FC<DesktopIconProps> = ({ icon, onMouseDown, onDoubleClick, onRightClick }) => {
   const renderIconImage = () => {
     const iconContainerStyle = "w-16 h-16 flex items-center justify-center text-4xl group-hover:scale-110 transition-transform duration-100 ease-in-out";
     if (icon.icon === 'folder') return <div className={iconContainerStyle}><FaFolder className="text-blue-500 drop-shadow-md" /></div>;
@@ -24,6 +25,7 @@ export const DesktopIcon: React.FC<DesktopIconProps> = ({ icon, onMouseDown, onD
       style={{ left: `${icon.position?.x ?? 20}px`, top: `${icon.position?.y ?? 20}px` }}
       onMouseDown={(e) => onMouseDown(icon.id, e)}
       onDoubleClick={() => onDoubleClick(icon)}
+      onContextMenu={(e) => onRightClick?.(icon, e)}
     >
       {renderIconImage()}
       <div className="mt-1 bg-black bg-opacity-30 text-white px-1.5 py-0.5 rounded text-xs text-center w-full max-w-[90px] truncate shadow backdrop-blur-sm">

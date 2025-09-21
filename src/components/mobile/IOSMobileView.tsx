@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { DesktopIcon, Screen } from "../../types/interfaces";
 import { PdfViewer } from "../PdfViewer";
+import { Browser } from "../Browser";
 import { FaBatteryFull, FaWifi } from "react-icons/fa";
 import { MobileScreen } from "./MobileScreen";
 import { MobileDock } from "./MobileDock";
@@ -43,6 +44,10 @@ export const IOSMobileView: React.FC<IOSMobileViewProps> = ({ apps }) => {
         type === "pdf" && pdfPath ? (
           <div style={{ height: "100vh", width: "100vw", overflow: "hidden" }}>
             <PdfViewer pdfPath={pdfPath} />
+          </div>
+        ) : type === "browser" ? (
+          <div style={{ height: "100vh", width: "100vw", overflow: "hidden" }}>
+            <Browser />
           </div>
         ) : (
           <div className="flex items-center justify-center h-full">

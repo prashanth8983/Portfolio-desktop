@@ -20,7 +20,7 @@ export const MobileDock: React.FC<MobileDockProps> = ({ onOpenScreen }) => {
           <button
             key={item.id}
             className="flex flex-col items-center justify-center text-gray-800 w-14 h-14 rounded-lg transform transition-transform active:scale-90 focus:outline-none focus:ring-2 focus:ring-blue-300"
-            onClick={() => onOpenScreen('other', item.name)}
+            onClick={() => item.id === 'safari' ? onOpenScreen('browser', item.name) : onOpenScreen('other', item.name)}
             title={item.name}
           >
             {item.icon}

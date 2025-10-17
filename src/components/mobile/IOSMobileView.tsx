@@ -2,6 +2,11 @@ import React, { useState, useEffect } from "react";
 import { DesktopIcon, Screen } from "../../types/interfaces";
 import { PdfViewer } from "../PdfViewer";
 import { Browser } from "../Browser";
+import { Terminal } from "../Terminal";
+import { ProjectViewer } from "../ProjectViewer";
+import { Gallery } from "../Gallery";
+import { Mail } from "../Mail";
+import { Music } from "../Music";
 import { FaBatteryFull, FaWifi } from "react-icons/fa";
 import { MobileScreen } from "./MobileScreen";
 import { MobileDock } from "./MobileDock";
@@ -31,7 +36,7 @@ export const IOSMobileView: React.FC<IOSMobileViewProps> = ({ apps }) => {
   }, []);
 
   const openScreen = (
-    type: "pdf" | "browser" | "other",
+    type: "pdf" | "browser" | "terminal" | "projects" | "photos" | "mail" | "music" | "other",
     title: string,
     pdfPath?: string
   ) => {
@@ -48,6 +53,26 @@ export const IOSMobileView: React.FC<IOSMobileViewProps> = ({ apps }) => {
         ) : type === "browser" ? (
           <div style={{ height: "100vh", width: "100vw", overflow: "hidden" }}>
             <Browser />
+          </div>
+        ) : type === "terminal" ? (
+          <div style={{ height: "100vh", width: "100vw", overflow: "hidden" }}>
+            <Terminal />
+          </div>
+        ) : type === "projects" ? (
+          <div style={{ height: "100vh", width: "100vw", overflow: "hidden" }}>
+            <ProjectViewer />
+          </div>
+        ) : type === "photos" ? (
+          <div style={{ height: "100vh", width: "100vw", overflow: "hidden" }}>
+            <Gallery />
+          </div>
+        ) : type === "mail" ? (
+          <div style={{ height: "100vh", width: "100vw", overflow: "hidden" }}>
+            <Mail />
+          </div>
+        ) : type === "music" ? (
+          <div style={{ height: "100vh", width: "100vw", overflow: "hidden" }}>
+            <Music />
           </div>
         ) : (
           <div className="flex items-center justify-center h-full">
@@ -66,6 +91,7 @@ export const IOSMobileView: React.FC<IOSMobileViewProps> = ({ apps }) => {
     if (app.type === "pdf" && app.content)
       openScreen("pdf", app.name, app.content);
     else if (app.id === "finder") openScreen("other", "Files");
+    else if (app.id === "projects") openScreen("projects", "Projects");
     else openScreen("other", app.name);
   };
 

@@ -8,6 +8,12 @@ import { Spotlight } from '../Spotlight';
 import { Calculator } from '../Calculator';
 import { TextEditor } from '../TextEditor';
 import { AboutThisMac } from '../AboutThisMac';
+import { Terminal } from '../Terminal';
+import { ProjectViewer } from '../ProjectViewer';
+import { Gallery } from '../Gallery';
+import { Mail } from '../Mail';
+import { Music } from '../Music';
+import { ActivityMonitor } from '../ActivityMonitor';
 import { useTheme } from '../../contexts/ThemeContext';
 import { ContextMenu, getDesktopContextMenu, getFileContextMenu, ContextMenuItem } from '../ContextMenu';
 import { FaApple } from 'react-icons/fa';
@@ -113,7 +119,7 @@ export const MacDesktop: React.FC<MacDesktopProps> = ({ apps, dockItems }) => {
     if (draggingIcon) setDraggingIcon(null);
   };
 
-  const openWindow = (type: 'browser' | 'finder' | 'pdf' | 'other', title: string, pdfPath?: string, dockId?: string) => {
+  const openWindow = (type: 'browser' | 'finder' | 'pdf' | 'terminal' | 'projects' | 'photos' | 'mail' | 'music' | 'activity-monitor' | 'other', title: string, pdfPath?: string, dockId?: string) => {
     // Calculate window position with offset for multiple windows
     const existingWindows = windows.filter(w => !w.isMinimized);
     const offset = existingWindows.length * 30;
@@ -136,6 +142,12 @@ export const MacDesktop: React.FC<MacDesktopProps> = ({ apps, dockItems }) => {
       dockId,
       content: type === 'pdf' && pdfPath ? <PdfViewer pdfPath={pdfPath} /> :
                type === 'browser' ? <Browser /> :
+               type === 'terminal' ? <Terminal /> :
+               type === 'projects' ? <ProjectViewer /> :
+               type === 'photos' ? <Gallery /> :
+               type === 'mail' ? <Mail /> :
+               type === 'music' ? <Music /> :
+               type === 'activity-monitor' ? <ActivityMonitor /> :
                title === 'Calculator' ? <Calculator /> :
                title === 'TextEdit' ? <TextEditor /> :
                title === 'About This Mac' ? <AboutThisMac /> :
@@ -148,6 +160,7 @@ export const MacDesktop: React.FC<MacDesktopProps> = ({ apps, dockItems }) => {
   const handleIconDoubleClick = (icon: DesktopIconType) => {
     if (icon.type === 'pdf' && icon.content) openWindow('pdf', icon.name, icon.content);
     else if (icon.type === 'app' && icon.id === 'finder') openWindow('finder', 'Finder', undefined, 'finder-dock');
+    else if (icon.type === 'folder' && icon.id === 'projects') openWindow('projects', 'Projects', undefined, 'projects-folder');
   };
 
   const handleDockItemClick = (id: string) => {
@@ -169,6 +182,12 @@ export const MacDesktop: React.FC<MacDesktopProps> = ({ apps, dockItems }) => {
     else if (id === 'preview') openWindow('pdf', 'resume.pdf', '/Resume.pdf', 'preview');
     else if (id === 'calculator') openWindow('other', 'Calculator', undefined, 'calculator');
     else if (id === 'textedit') openWindow('other', 'TextEdit', undefined, 'textedit');
+    else if (id === 'terminal') openWindow('terminal', 'Terminal', undefined, 'terminal');
+    else if (id === 'mail') openWindow('mail', 'Mail', undefined, 'mail');
+    else if (id === 'music') openWindow('music', 'Music', undefined, 'music');
+    else if (id === 'photos') openWindow('photos', 'Photos', undefined, 'photos');
+    else if (id === 'activity-monitor') openWindow('activity-monitor', 'Activity Monitor', undefined, 'activity-monitor');
+    else if (id === 'projects-folder') openWindow('projects', 'Projects', undefined, 'projects-folder');
     else openWindow('other', dockItems.find((item) => item.id === id)?.name || 'Window', undefined, id);
   };
 

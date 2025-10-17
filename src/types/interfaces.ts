@@ -16,7 +16,7 @@ export interface DockItem {
 export interface Window {
   id: string;
   title: string;
-  type: 'browser' | 'finder' | 'pdf' | 'other';
+  type: 'browser' | 'finder' | 'pdf' | 'terminal' | 'projects' | 'photos' | 'mail' | 'music' | 'activity-monitor' | 'other';
   position: { x: number; y: number };
   size: { width: number; height: number };
   isMinimized: boolean;
@@ -30,7 +30,7 @@ export interface Window {
 export interface Screen {
   id: string;
   title: string;
-  type: 'home' | 'pdf' | 'browser' | 'other';
+  type: 'home' | 'pdf' | 'browser' | 'terminal' | 'projects' | 'photos' | 'mail' | 'music' | 'other';
   content?: React.ReactNode;
   pdfPath?: string;
 }

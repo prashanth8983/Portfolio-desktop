@@ -2,14 +2,16 @@ import React, { useState, useEffect } from 'react';
 import { MacDesktop } from './desktop/MacDesktop';
 import { IOSMobileView } from './mobile/IOSMobileView';
 import { DesktopIcon, DockItem } from '../types/interfaces';
-import { SiGooglechrome, SiSafari, SiApplemusic, SiAppstore } from 'react-icons/si';
+import { SiGooglechrome, SiSafari, SiApplemusic } from 'react-icons/si';
 //import { FaChrome, FaCog, FaComment, FaEnvelope, FaEye, FaFolderOpen, FaMusic, FaSafari, FaShoppingBag, FaTrash } from 'react-icons/fa';
 import {
   IoFolderOpenOutline, // Finder approximation
   IoMail,             // Mail
-  IoImagesOutline,    // Preview approximation
+  IoImagesOutline,    // Preview approximation / Photos
   IoSettingsSharp,    // System Preferences/Settings
   IoTrashBin,         // Trash
+  IoTerminal,         // Terminal
+  IoStatsChart,       // Activity Monitor
 } from 'react-icons/io5';
 
 const ResponsiveView: React.FC = () => {
@@ -24,8 +26,9 @@ const ResponsiveView: React.FC = () => {
   const apps: DesktopIcon[] = [
     { id: 'finder', name: 'Finder', icon: 'folder', type: 'app', position: { x: 20, y: 20 } },
     { id: 'trash', name: 'Trash', icon: 'trash', type: 'app', position: { x: 20, y: 100 } },
-    { id: 'documents', name: 'Documents', icon: 'folder', type: 'folder', position: { x: 20, y: 180 } },
-    { id: 'sample-pdf', name: 'Prashanth Kumar.pdf', icon: 'pdf', type: 'pdf', position: { x: 20, y: 260 }, content: './Resume.pdf'  },
+    { id: 'projects', name: 'Projects', icon: 'folder', type: 'folder', position: { x: 20, y: 180 } },
+    { id: 'documents', name: 'Documents', icon: 'folder', type: 'folder', position: { x: 20, y: 260 } },
+    { id: 'sample-pdf', name: 'Prashanth Kumar.pdf', icon: 'pdf', type: 'pdf', position: { x: 20, y: 340 }, content: './Resume.pdf'  },
   ];
 
   const dockIconSize = 32;
@@ -51,9 +54,14 @@ const ResponsiveView: React.FC = () => {
       iconElement: <IoMail size={dockIconSize} className="text-blue-500" />,
     },
     {
-      id: 'preview',
-      name: 'Preview',
-      iconElement: <IoImagesOutline size={dockIconSize} className="text-blue-400" />,
+      id: 'terminal',
+      name: 'Terminal',
+      iconElement: <IoTerminal size={dockIconSize} className="text-gray-800" />,
+    },
+    {
+      id: 'photos',
+      name: 'Photos',
+      iconElement: <IoImagesOutline size={dockIconSize} className="text-yellow-500" />,
     },
     {
       id: 'music',
@@ -61,9 +69,9 @@ const ResponsiveView: React.FC = () => {
       iconElement: <SiApplemusic size={dockIconSize} className="text-red-500" />,
     },
     {
-      id: 'appstore',
-      name: 'App Store',
-      iconElement: <SiAppstore size={dockIconSize} className="text-blue-500" />,
+      id: 'activity-monitor',
+      name: 'Activity Monitor',
+      iconElement: <IoStatsChart size={dockIconSize} className="text-green-500" />,
     },
     {
       id: 'preferences',

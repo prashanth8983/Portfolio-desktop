@@ -2,7 +2,7 @@ export interface DesktopIcon {
   id: string;
   name: string;
   icon: string;
-  type: 'folder' | 'pdf' | 'app';
+  type: 'folder' | 'pdf' | 'app' | 'drive';
   position?: { x: number; y: number };
   content?: string;
 }
@@ -16,7 +16,7 @@ export interface DockItem {
 export interface Window {
   id: string;
   title: string;
-  type: 'browser' | 'finder' | 'pdf' | 'terminal' | 'projects' | 'photos' | 'mail' | 'music' | 'activity-monitor' | 'other';
+  type: 'browser' | 'finder' | 'pdf' | 'terminal' | 'projects' | 'photos' | 'mail' | 'music' | 'activity-monitor' | 'profile' | 'other';
   position: { x: number; y: number };
   size: { width: number; height: number };
   isMinimized: boolean;

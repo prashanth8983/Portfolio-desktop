@@ -2,17 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { MacDesktop } from './desktop/MacDesktop';
 import { IOSMobileView } from './mobile/IOSMobileView';
 import { DesktopIcon, DockItem } from '../types/interfaces';
-import { SiGooglechrome, SiSafari, SiApplemusic } from 'react-icons/si';
-//import { FaChrome, FaCog, FaComment, FaEnvelope, FaEye, FaFolderOpen, FaMusic, FaSafari, FaShoppingBag, FaTrash } from 'react-icons/fa';
-import {
-  IoFolderOpenOutline, // Finder approximation
-  IoMail,             // Mail
-  IoImagesOutline,    // Preview approximation / Photos
-  IoSettingsSharp,    // System Preferences/Settings
-  IoTrashBin,         // Trash
-  IoTerminal,         // Terminal
-  IoStatsChart,       // Activity Monitor
-} from 'react-icons/io5';
+import { getIconUrl } from '../utils/icons';
 
 const ResponsiveView: React.FC = () => {
   const [isMobile, setIsMobile] = useState<boolean>(window.innerWidth < 768);
@@ -23,65 +13,96 @@ const ResponsiveView: React.FC = () => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  const apps: DesktopIcon[] = [
-    { id: 'finder', name: 'Finder', icon: 'folder', type: 'app', position: { x: 20, y: 20 } },
-    { id: 'trash', name: 'Trash', icon: 'trash', type: 'app', position: { x: 20, y: 100 } },
-    { id: 'projects', name: 'Projects', icon: 'folder', type: 'folder', position: { x: 20, y: 180 } },
-    { id: 'documents', name: 'Documents', icon: 'folder', type: 'folder', position: { x: 20, y: 260 } },
-    { id: 'sample-pdf', name: 'Prashanth Kumar.pdf', icon: 'pdf', type: 'pdf', position: { x: 20, y: 340 }, content: './Resume.pdf'  },
-  ];
+  /* Initial Icon Placement Logic */
+  const getInitialApps = (): DesktopIcon[] => {
+    const screenWidth = window.innerWidth;
+    const rightMargin = 120; // Distance from right edge
+    const topMargin = 50;   // Distance from top
+    const gridGap = 110;    // Vertical spacing
 
-  const dockIconSize = 32;
+    const colX = screenWidth - rightMargin;
+
+    return [
+      { id: 'macintosh-hd', name: 'Macintosh HD', icon: 'hard-disk', type: 'drive', position: { x: colX, y: topMargin } },
+      { id: 'projects', name: 'Projects', icon: 'projects', type: 'folder', position: { x: colX, y: topMargin + gridGap } },
+      { id: 'documents', name: 'Documents', icon: 'documents', type: 'folder', position: { x: colX, y: topMargin + gridGap * 2 } },
+      { id: 'profile', name: 'Profile', icon: 'contact', type: 'app', position: { x: colX, y: topMargin + gridGap * 3 } },
+      { id: 'resume', name: 'Prashanth Kumar.pdf', icon: 'pdf', type: 'pdf', position: { x: colX, y: topMargin + gridGap * 4 }, content: './Resume.pdf' },
+    ];
+  };
+
+  const [apps, setApps] = useState<DesktopIcon[]>(getInitialApps());
+
+  // Update positions on resize if needed, or just leave them relative? 
+  // macOS keeps icons in place relative to top-left usually, but defaults to right.
+  // For this simple web-desktop, we can re-calculate or just let them stick.
+  // Let's re-calculate on resize to keep them reachable.
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+      setApps(prev => {
+        // Only update X, keep Y (unless we want full reflow)
+        const newX = window.innerWidth - 120;
+        return prev.map(app => ({
+          ...app,
+          position: { x: newX, y: app.position?.y ?? 50 }
+        }));
+      });
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   const dockItems: DockItem[] = [
     {
       id: 'finder-dock',
       name: 'Finder',
-      iconElement: <IoFolderOpenOutline size={dockIconSize} className="text-sky-500" />,
+      iconElement: <img src={getIconUrl('finder')} alt="Finder" className="w-full h-full object-contain drop-shadow-md" />,
     },
     {
       id: 'chrome',
       name: 'Chrome',
-      iconElement: <SiGooglechrome size={dockIconSize} className="text-red-500" />,
+      iconElement: <img src={getIconUrl('chrome')} alt="Chrome" className="w-full h-full object-contain drop-shadow-md" />,
     },
     {
       id: 'safari',
       name: 'Safari',
-      iconElement: <SiSafari size={dockIconSize} className="text-blue-600" />,
+      iconElement: <img src={getIconUrl('safari')} alt="Safari" className="w-full h-full object-contain drop-shadow-md" />,
     },
     {
       id: 'mail',
       name: 'Mail',
-      iconElement: <IoMail size={dockIconSize} className="text-blue-500" />,
+      iconElement: <img src={getIconUrl('mail')} alt="Mail" className="w-full h-full object-contain drop-shadow-md" />,
     },
     {
       id: 'terminal',
       name: 'Terminal',
-      iconElement: <IoTerminal size={dockIconSize} className="text-gray-800" />,
+      iconElement: <img src={getIconUrl('terminal')} alt="Terminal" className="w-full h-full object-contain drop-shadow-md" />,
     },
     {
       id: 'photos',
       name: 'Photos',
-      iconElement: <IoImagesOutline size={dockIconSize} className="text-yellow-500" />,
+      iconElement: <img src={getIconUrl('photos')} alt="Photos" className="w-full h-full object-contain drop-shadow-md" />,
     },
     {
       id: 'music',
       name: 'Music',
-      iconElement: <SiApplemusic size={dockIconSize} className="text-red-500" />,
+      iconElement: <img src={getIconUrl('music')} alt="Music" className="w-full h-full object-contain drop-shadow-md" />,
     },
     {
       id: 'activity-monitor',
       name: 'Activity Monitor',
-      iconElement: <IoStatsChart size={dockIconSize} className="text-green-500" />,
+      iconElement: <img src={getIconUrl('activity-monitor')} alt="Activity Monitor" className="w-full h-full object-contain drop-shadow-md" />,
     },
     {
       id: 'preferences',
       name: 'System Preferences',
-      iconElement: <IoSettingsSharp size={dockIconSize} className="text-gray-500" />,
+      iconElement: <img src={getIconUrl('preferences')} alt="System Preferences" className="w-full h-full object-contain drop-shadow-md" />,
     },
     {
       id: 'trash-dock',
       name: 'Trash',
-      iconElement: <IoTrashBin size={dockIconSize} className="text-gray-600" />,
+      iconElement: <img src={getIconUrl('trash')} alt="Trash" className="w-full h-full object-contain drop-shadow-md" />,
     },
   ];
 

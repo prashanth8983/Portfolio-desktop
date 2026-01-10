@@ -31,14 +31,6 @@ export const Spotlight: React.FC<SpotlightProps> = ({ isVisible, onClose, onOpen
 
   const allItems: SpotlightItem[] = [
     {
-      id: 'browser',
-      title: 'Chrome',
-      subtitle: 'Application',
-      type: 'app',
-      icon: renderAppIcon('chrome'),
-      action: () => onOpenApp?.('chrome')
-    },
-    {
       id: 'safari',
       title: 'Safari',
       subtitle: 'Application',
@@ -150,7 +142,7 @@ export const Spotlight: React.FC<SpotlightProps> = ({ isVisible, onClose, onOpen
         type: 'web',
         icon: <MagnifyingGlassIcon className="text-blue-500 w-6 h-6" />,
         action: () => {
-          onOpenApp?.('chrome');
+          onOpenApp?.('safari');
           // You could pass the search query to the browser here
         }
       });

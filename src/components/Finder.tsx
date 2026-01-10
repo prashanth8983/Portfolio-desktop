@@ -66,13 +66,12 @@ const initialMockFiles: Record<string, FileItem[]> = {
         { id: 'personal', name: 'Personal', type: 'folder', size: '--', date: 'Dec 28, 2025', color: 'green', emoji: '🏠' },
     ],
     'downloads': [
-        { id: 'chrome', name: 'googlechrome.dmg', type: 'file', size: '240 MB', date: 'Just now' },
         { id: 'image', name: 'wallpaper.jpg', type: 'image', size: '4.8 MB', date: '1 hour ago' },
         { id: 'video', name: 'WWDC 2026 Keynote.mov', type: 'video', size: '2.4 GB', date: 'Jan 2, 2026' },
         { id: 'audio', name: 'Voice Memo.m4a', type: 'audio', size: '3.5 MB', date: 'Dec 24, 2025' },
+        { id: 'xcode', name: 'Xcode_16.dmg', type: 'file', size: '8.2 GB', date: 'Just now' },
     ],
     'applications': [
-        { id: 'chrome-app', name: 'Google Chrome', type: 'app', icon: 'chrome' },
         { id: 'safari-app', name: 'Safari', type: 'app', icon: 'safari' },
         { id: 'finder-app', name: 'Finder', type: 'app', icon: 'finder' },
         { id: 'mail-app', name: 'Mail', type: 'app', icon: 'mail' },

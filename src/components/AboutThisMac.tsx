@@ -1,77 +1,104 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { useTheme } from '../contexts/ThemeContext';
+import { FaApple } from 'react-icons/fa';
 
 export const AboutThisMac: React.FC = () => {
+  const { isDark } = useTheme();
+  const [activeTab, setActiveTab] = useState('Overview');
+
+  const tabs = ['Overview', 'Displays', 'Storage', 'Support', 'Resources'];
+
   const systemInfo = {
-    modelName: 'MacBook Air',
-    modelYear: '13-inch, M3, 2024',
-    chip: 'Apple M3',
-    memory: '16 GB',
-    serialNumber: 'MT99WX9X4',
-    macosVersion: 'Sequoia 15.6.1'
+    modelName: 'MacBook Pro',
+    modelDetail: '14-inch, Nov 2024',
+    chip: 'Apple M4 Max',
+    memory: '128 GB',
+    startupDisk: 'Macintosh HD',
+    serialNumber: 'X9F2K1L0P',
+    macosVersion: 'macOS Sequoia',
+    versionNumber: '15.2'
   };
 
   return (
-    <div className="bg-white dark:bg-gray-900 text-gray-900 dark:text-white w-full h-full flex flex-col items-center justify-center px-8 py-12">
-      {/* Laptop Image */}
-      <div className="mb-8">
-        <div className="relative">
-          {/* Laptop illustration */}
-          <div className="w-48 h-32 bg-gradient-to-b from-gray-300 to-gray-400 dark:from-gray-600 dark:to-gray-700 rounded-t-2xl relative">
-            {/* Screen */}
-            <div className="absolute inset-2 bg-gradient-to-b from-blue-400 to-blue-600 rounded-xl flex items-center justify-center">
-              <div className="w-2 h-1 bg-gray-800 rounded-full"></div>
+    <div className={`w-full h-full flex flex-col ${isDark ? 'bg-[#1e1e1e] text-white' : 'bg-[#e8e8e8] text-black'} overflow-hidden`}>
+
+      {/* Toolbar / Tabs */}
+      <div className={`w-full h-12 flex items-center justify-center border-b border-black/10 px-2 select-none ${isDark ? 'bg-white/5 border-white/10' : 'bg-white/50 border-black/5'}`}>
+        <div className="flex space-x-1">
+          {tabs.map(tab => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={`px-3 py-1 text-[13px] rounded-md font-medium transition-all ${activeTab === tab
+                ? (isDark ? 'bg-white/20 text-white shadow-sm' : 'bg-white text-black shadow-sm')
+                : (isDark ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-black')}`}
+            >
+              {tab}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Content Area */}
+      <div className="flex-1 p-8 flex flex-row items-start space-x-8">
+
+        {/* Left Side: Icon */}
+        <div className="flex flex-col items-center space-y-4">
+          <div className="w-32 h-32 rounded-full bg-gradient-to-br from-[#00C6FB] to-[#005BEA] shadow-xl flex items-center justify-center relative overflow-hidden ring-4 ring-white/10">
+            <FaApple className="text-white drop-shadow-md" size={72} />
+            {/* Glass Shine */}
+            <div className="absolute inset-0 bg-gradient-to-b from-white/30 to-transparent opacity-60"></div>
+          </div>
+          <div className="text-center">
+            <h2 className="text-2xl font-bold tracking-tight">{systemInfo.macosVersion}</h2>
+            <p className={`text-[13px] font-medium ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Version {systemInfo.versionNumber}</p>
+          </div>
+        </div>
+
+        {/* Right Side: Specs */}
+        <div className="flex-1 pt-1">
+          <div className="space-y-3">
+            <div className="space-y-0.5">
+              <h3 className="text-[15px] font-bold">{systemInfo.modelName}</h3>
+              <p className={`text-[12px] ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{systemInfo.modelDetail}</p>
+            </div>
+
+            <div className="pt-2 space-y-2 text-[13px]">
+              <div className="grid grid-cols-[80px_1fr] gap-2 items-start">
+                <span className={`font-medium text-right ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Chip</span>
+                <span className="font-medium">{systemInfo.chip}</span>
+              </div>
+              <div className="grid grid-cols-[80px_1fr] gap-2 items-start">
+                <span className={`font-medium text-right ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Memory</span>
+                <span className="font-medium">{systemInfo.memory}</span>
+              </div>
+              <div className="grid grid-cols-[80px_1fr] gap-2 items-start">
+                <span className={`font-medium text-right ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Startup Disk</span>
+                <span className="font-medium">{systemInfo.startupDisk}</span>
+              </div>
+              <div className="grid grid-cols-[80px_1fr] gap-2 items-start">
+                <span className={`font-medium text-right ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Serial</span>
+                <span className="font-medium">{systemInfo.serialNumber}</span>
+              </div>
             </div>
           </div>
-          {/* Base */}
-          <div className="w-52 h-4 bg-gradient-to-b from-gray-200 to-gray-300 dark:from-gray-500 dark:to-gray-600 rounded-b-3xl mx-auto relative">
-            <div className="absolute inset-x-0 bottom-0 h-2 bg-gradient-to-r from-transparent via-gray-400 dark:via-gray-400 to-transparent rounded-b-3xl"></div>
+
+          {/* Buttons */}
+          <div className="mt-8 flex space-x-3">
+            <button className={`px-4 py-1.5 rounded-md text-[13px] font-medium shadow-sm active:scale-95 transition-all ${isDark ? 'bg-[#333] border border-white/20 hover:bg-[#444]' : 'bg-white border border-gray-300 hover:bg-gray-50'}`}>
+              System Report...
+            </button>
+            <button className={`px-4 py-1.5 rounded-md text-[13px] font-medium shadow-sm active:scale-95 transition-all ${isDark ? 'bg-[#333] border border-white/20 hover:bg-[#444]' : 'bg-white border border-gray-300 hover:bg-gray-50'}`}>
+              Software Update...
+            </button>
           </div>
         </div>
+
       </div>
 
-      {/* Model Information */}
-      <div className="text-center space-y-2 mb-8">
-        <h1 className="text-2xl font-light text-gray-900 dark:text-white">{systemInfo.modelName}</h1>
-        <p className="text-sm text-gray-600 dark:text-gray-400">{systemInfo.modelYear}</p>
-      </div>
-
-      {/* System Details */}
-      <div className="space-y-2 text-center max-w-xs">
-        <div className="flex justify-between items-center">
-          <span className="text-sm text-gray-600 dark:text-gray-400">Chip</span>
-          <span className="text-sm font-medium">{systemInfo.chip}</span>
-        </div>
-        <div className="flex justify-between items-center">
-          <span className="text-sm text-gray-600 dark:text-gray-400">Memory</span>
-          <span className="text-sm font-medium">{systemInfo.memory}</span>
-        </div>
-        <div className="flex justify-between items-center">
-          <span className="text-sm text-gray-600 dark:text-gray-400">Serial number</span>
-          <span className="text-sm font-medium">{systemInfo.serialNumber}</span>
-        </div>
-        <div className="flex justify-between items-center">
-          <span className="text-sm text-gray-600 dark:text-gray-400">macOS</span>
-          <span className="text-sm font-medium">{systemInfo.macosVersion}</span>
-        </div>
-      </div>
-
-      {/* More Info Button */}
-      <div className="mt-8">
-        <button
-          className="px-6 py-2 bg-blue-500 hover:bg-blue-600 text-white text-sm rounded-lg transition-colors"
-          onClick={() => {
-            alert('System Information would open here in a real Mac.');
-          }}
-        >
-          More Info...
-        </button>
-      </div>
-
-      {/* Footer */}
-      <div className="mt-8 text-center">
-        <p className="text-xs text-gray-500 dark:text-gray-400">Regulatory Certification</p>
-        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">™ and © 1983-2025 Apple Inc.</p>
-        <p className="text-xs text-gray-500 dark:text-gray-400">All Rights Reserved.</p>
+      {/* Footer Info */}
+      <div className={`px-6 py-3 text-[10px] text-center border-t ${isDark ? 'border-white/10 text-gray-500' : 'border-black/5 text-gray-400'}`}>
+        ™ and © 1983-{new Date().getFullYear()} Apple Inc. All Rights Reserved.
       </div>
     </div>
   );

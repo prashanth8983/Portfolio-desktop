@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { MacDesktop } from './desktop/MacDesktop';
 import { IOSMobileView } from './mobile/IOSMobileView';
+import { LockScreen } from './LockScreen';
 import { DesktopIcon, DockItem } from '../types/interfaces';
 import { getIconUrl } from '../utils/icons';
 
 const ResponsiveView: React.FC = () => {
   const [isMobile, setIsMobile] = useState<boolean>(window.innerWidth < 768);
+  const [isLocked, setIsLocked] = useState<boolean>(true);
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
@@ -26,7 +28,7 @@ const ResponsiveView: React.FC = () => {
       { id: 'macintosh-hd', name: 'Macintosh HD', icon: 'hard-disk', type: 'drive', position: { x: colX, y: topMargin } },
       { id: 'projects', name: 'Projects', icon: 'projects', type: 'folder', position: { x: colX, y: topMargin + gridGap } },
       { id: 'documents', name: 'Documents', icon: 'documents', type: 'folder', position: { x: colX, y: topMargin + gridGap * 2 } },
-      { id: 'profile', name: 'Profile', icon: 'contact', type: 'app', position: { x: colX, y: topMargin + gridGap * 3 } },
+      { id: 'profile', name: 'Education', icon: 'education', type: 'app', position: { x: colX, y: topMargin + gridGap * 3 } },
       { id: 'resume', name: 'Prashanth Kumar.pdf', icon: 'pdf', type: 'pdf', position: { x: colX, y: topMargin + gridGap * 4 }, content: './Resume.pdf' },
     ];
   };
@@ -60,11 +62,6 @@ const ResponsiveView: React.FC = () => {
       iconElement: <img src={getIconUrl('finder')} alt="Finder" className="w-full h-full object-contain drop-shadow-md" />,
     },
     {
-      id: 'chrome',
-      name: 'Chrome',
-      iconElement: <img src={getIconUrl('chrome')} alt="Chrome" className="w-full h-full object-contain drop-shadow-md" />,
-    },
-    {
       id: 'safari',
       name: 'Safari',
       iconElement: <img src={getIconUrl('safari')} alt="Safari" className="w-full h-full object-contain drop-shadow-md" />,
@@ -95,6 +92,11 @@ const ResponsiveView: React.FC = () => {
       iconElement: <img src={getIconUrl('activity-monitor')} alt="Activity Monitor" className="w-full h-full object-contain drop-shadow-md" />,
     },
     {
+      id: 'calendar',
+      name: 'Calendar',
+      iconElement: <img src={getIconUrl('calendar')} alt="Calendar" className="w-full h-full object-contain drop-shadow-md" />,
+    },
+    {
       id: 'preferences',
       name: 'System Preferences',
       iconElement: <img src={getIconUrl('preferences')} alt="System Preferences" className="w-full h-full object-contain drop-shadow-md" />,
@@ -106,7 +108,12 @@ const ResponsiveView: React.FC = () => {
     },
   ];
 
-  return isMobile ? <IOSMobileView apps={apps} /> : <MacDesktop apps={apps} dockItems={dockItems} />;
+  return (
+    <>
+      <LockScreen isLocked={isLocked} onUnlock={() => setIsLocked(false)} />
+      {isMobile ? <IOSMobileView apps={apps} /> : <MacDesktop apps={apps} dockItems={dockItems} onLock={() => setIsLocked(true)} />}
+    </>
+  );
 };
 
 export default ResponsiveView;

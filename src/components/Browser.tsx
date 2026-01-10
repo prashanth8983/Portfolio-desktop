@@ -1,6 +1,15 @@
-import React, { useState } from 'react';
-import { IoArrowBack, IoArrowForward, IoRefresh, IoHome, IoSearch, IoLockClosed } from 'react-icons/io5';
-import { HiPlus, HiX } from 'react-icons/hi';
+import React, { useState, useCallback } from 'react';
+import {
+  IoChevronBack,
+  IoChevronForward,
+  IoReloadOutline,
+  IoShareOutline,
+  IoAdd,
+  IoShieldCheckmark,
+  IoLockClosed,
+  IoClose
+} from 'react-icons/io5';
+import { HiOutlineViewGrid } from 'react-icons/hi';
 
 interface Tab {
   id: string;
@@ -10,89 +19,141 @@ interface Tab {
   isActive: boolean;
 }
 
+interface Favorite {
+  id: string;
+  title: string;
+  url: string;
+  color: string;
+  icon: React.ReactNode;
+}
+
 interface BrowserProps {
   initialUrl?: string;
 }
 
-export const Browser: React.FC<BrowserProps> = ({ initialUrl = 'https://prashanth8983.github.io/Portfolio-desktop' }) => {
+export const Browser: React.FC<BrowserProps> = ({ initialUrl = 'about:blank' }) => {
   const [tabs, setTabs] = useState<Tab[]>([
     {
       id: '1',
-      title: 'Portfolio Desktop',
+      title: 'Start Page',
       url: initialUrl,
-      favicon: '🏠',
+      favicon: '🧭',
       isActive: true,
     },
   ]);
 
   const [currentUrl, setCurrentUrl] = useState<string>(initialUrl);
-  const [inputUrl, setInputUrl] = useState<string>(initialUrl);
+  const [inputUrl, setInputUrl] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [canGoBack, setCanGoBack] = useState<boolean>(false);
-  const [canGoForward, setCanGoForward] = useState<boolean>(false);
+  const [showStartPage, setShowStartPage] = useState<boolean>(true);
+  const [history, setHistory] = useState<string[]>([]);
+  const [historyIndex, setHistoryIndex] = useState<number>(-1);
   const [iframeError, setIframeError] = useState<boolean>(false);
-  const [loadTimeout, setLoadTimeout] = useState<number | null>(null);
+  const [isUrlFocused, setIsUrlFocused] = useState<boolean>(false);
 
-  const defaultSites = [
-    { title: 'Portfolio', url: 'https://prashanth8983.github.io/Portfolio-desktop', favicon: '🏠' },
-    { title: 'GitHub', url: 'https://github.com/prashanth8983', favicon: '📱' },
-    { title: 'Wikipedia', url: 'https://en.wikipedia.org', favicon: '📖' },
-    { title: 'Example.com', url: 'https://example.com', favicon: '🌐' },
+  // Mock Favorites Data
+  const favorites: Favorite[] = [
+    { id: '1', title: 'Portfolio', url: 'https://prashanth8983.github.io/Portfolio-desktop', color: 'bg-gradient-to-br from-blue-500 to-purple-600', icon: <span className="text-white text-2xl">🏠</span> },
+    { id: '2', title: 'GitHub', url: 'https://github.com/prashanth8983', color: 'bg-gray-800', icon: <span className="text-white font-bold text-xl">gh</span> },
+    { id: '3', title: 'LinkedIn', url: 'https://linkedin.com', color: 'bg-blue-600', icon: <span className="text-white font-bold text-xl">in</span> },
+    { id: '4', title: 'Google', url: 'https://google.com', color: 'bg-white border border-gray-200', icon: <span className="font-bold text-xl text-blue-500">G</span> },
+    { id: '5', title: 'Wikipedia', url: 'https://en.wikipedia.org', color: 'bg-gray-100', icon: <span className="font-serif text-xl font-bold text-gray-800">W</span> },
+    { id: '6', title: 'Apple', url: 'https://apple.com', color: 'bg-black', icon: <span className="text-white text-xl"></span> },
+    { id: '7', title: 'NYU', url: 'https://nyu.edu', color: 'bg-purple-700', icon: <span className="text-white font-bold">NYU</span> },
+    { id: '8', title: 'React', url: 'https://react.dev', color: 'bg-[#20232a]', icon: <span className="text-[#61dafb] text-2xl">⚛️</span> },
   ];
 
+  const navigateTo = useCallback((url: string, addToHistory = true) => {
+    let processedUrl = url.trim();
 
-  const handleUrlSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    let url = inputUrl.trim();
+    if (!processedUrl) return;
 
-    if (!url) return;
-
-    if (!url.startsWith('http://') && !url.startsWith('https://')) {
-      if (url.includes('.')) {
-        url = `https://${url}`;
+    if (!processedUrl.startsWith('http://') && !processedUrl.startsWith('https://')) {
+      if (processedUrl.includes('.')) {
+        processedUrl = `https://${processedUrl}`;
       } else {
-        url = `https://www.google.com/search?q=${encodeURIComponent(url)}`;
+        processedUrl = `https://www.google.com/search?q=${encodeURIComponent(processedUrl)}`;
       }
     }
 
     setIsLoading(true);
     setIframeError(false);
-    setCurrentUrl(url);
+    setShowStartPage(false);
+    setCurrentUrl(processedUrl);
+    setInputUrl(processedUrl);
 
-    // Clear any existing timeout
-    if (loadTimeout) {
-      clearTimeout(loadTimeout);
+    if (addToHistory) {
+      const newHistory = [...history.slice(0, historyIndex + 1), processedUrl];
+      setHistory(newHistory);
+      setHistoryIndex(newHistory.length - 1);
     }
 
-    // Set a timeout to detect if iframe fails to load (e.g., blocked by X-Frame-Options)
-    const timeout = setTimeout(() => {
-      setIsLoading(false);
-      setIframeError(true);
-    }, 5000); // 5 second timeout
-
-    setLoadTimeout(timeout);
-
+    // Update tab
     setTabs(tabs.map(tab =>
       tab.isActive
-        ? { ...tab, url, title: new URL(url).hostname }
+        ? { ...tab, url: processedUrl, title: getDomain(processedUrl) }
         : tab
     ));
+
+    // Timeout for iframe blocking detection
+    setTimeout(() => {
+      setIsLoading(false);
+    }, 3000);
+  }, [history, historyIndex, tabs]);
+
+  const getDomain = (url: string): string => {
+    try {
+      return new URL(url).hostname.replace('www.', '');
+    } catch {
+      return url;
+    }
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setInputUrl(e.target.value);
+  const handleUrlSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    navigateTo(inputUrl);
+    setIsUrlFocused(false);
   };
 
-  const handleInputFocus = () => {
-    setInputUrl(currentUrl);
+  const goBack = () => {
+    if (historyIndex > 0) {
+      const newIndex = historyIndex - 1;
+      setHistoryIndex(newIndex);
+      const url = history[newIndex];
+      setCurrentUrl(url);
+      setInputUrl(url);
+      setShowStartPage(false);
+      setTabs(tabs.map(tab =>
+        tab.isActive ? { ...tab, url, title: getDomain(url) } : tab
+      ));
+    }
+  };
+
+  const goForward = () => {
+    if (historyIndex < history.length - 1) {
+      const newIndex = historyIndex + 1;
+      setHistoryIndex(newIndex);
+      const url = history[newIndex];
+      setCurrentUrl(url);
+      setInputUrl(url);
+      setShowStartPage(false);
+      setTabs(tabs.map(tab =>
+        tab.isActive ? { ...tab, url, title: getDomain(url) } : tab
+      ));
+    }
+  };
+
+  const handleRefresh = () => {
+    setIsLoading(true);
+    setTimeout(() => setIsLoading(false), 1500);
   };
 
   const createNewTab = () => {
     const newTab: Tab = {
       id: Date.now().toString(),
-      title: 'New Tab',
-      url: 'https://google.com',
-      favicon: '🌐',
+      title: 'Start Page',
+      url: 'about:blank',
+      favicon: '🧭',
       isActive: true,
     };
 
@@ -100,13 +161,14 @@ export const Browser: React.FC<BrowserProps> = ({ initialUrl = 'https://prashant
       ...tabs.map(tab => ({ ...tab, isActive: false })),
       newTab
     ]);
-    setCurrentUrl(newTab.url);
-    setInputUrl(newTab.url);
+    setCurrentUrl('about:blank');
+    setInputUrl('');
+    setShowStartPage(true);
+    setIframeError(false);
   };
 
   const closeTab = (tabId: string, e: React.MouseEvent) => {
     e.stopPropagation();
-
     if (tabs.length === 1) return;
 
     const tabIndex = tabs.findIndex(tab => tab.id === tabId);
@@ -115,8 +177,10 @@ export const Browser: React.FC<BrowserProps> = ({ initialUrl = 'https://prashant
     if (tabs[tabIndex].isActive && newTabs.length > 0) {
       const nextActiveIndex = Math.min(tabIndex, newTabs.length - 1);
       newTabs[nextActiveIndex].isActive = true;
-      setCurrentUrl(newTabs[nextActiveIndex].url);
-      setInputUrl(newTabs[nextActiveIndex].url);
+      const activeTab = newTabs[nextActiveIndex];
+      setCurrentUrl(activeTab.url);
+      setInputUrl(activeTab.url === 'about:blank' ? '' : activeTab.url);
+      setShowStartPage(activeTab.url === 'about:blank');
     }
 
     setTabs(newTabs);
@@ -131,206 +195,239 @@ export const Browser: React.FC<BrowserProps> = ({ initialUrl = 'https://prashant
     const activeTab = newTabs.find(tab => tab.isActive);
     if (activeTab) {
       setCurrentUrl(activeTab.url);
-      setInputUrl(activeTab.url);
+      setInputUrl(activeTab.url === 'about:blank' ? '' : activeTab.url);
+      setShowStartPage(activeTab.url === 'about:blank');
     }
 
     setTabs(newTabs);
   };
 
-  const goBack = () => {
-    // Simulate browser back functionality
-    setCanGoForward(true);
-    if (canGoBack) {
-      setCanGoBack(false);
-    }
-  };
+  const canGoBack = historyIndex > 0;
+  const canGoForward = historyIndex < history.length - 1;
 
-  const goForward = () => {
-    // Simulate browser forward functionality
-    setCanGoBack(true);
-    if (canGoForward) {
-      setCanGoForward(false);
-    }
-  };
+  // Safari Start Page
+  const StartPage = () => (
+    <div className="flex-1 h-full bg-[#F9F9F9] overflow-y-auto relative w-full">
+      {/* Subtle texture */}
+      <div className="absolute inset-0 opacity-[0.02] pointer-events-none"
+        style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg width="20" height="20" xmlns="http://www.w3.org/2000/svg"%3E%3Cpath d="M0 0h20v20H0z" fill="none"/%3E%3Cpath d="M10 10h1v1h-1z" fill="%23000"/%3E%3C/svg%3E")' }}
+      />
 
-  const refresh = () => {
-    setIsLoading(true);
-    setTimeout(() => setIsLoading(false), 800);
-  };
+      <div className="max-w-4xl mx-auto px-6 py-10 flex flex-col items-center">
 
-  const goHome = () => {
-    const homeUrl = defaultSites[0].url;
-    setCurrentUrl(homeUrl);
-    setInputUrl(homeUrl);
-    setTabs(tabs.map(tab =>
-      tab.isActive
-        ? { ...tab, url: homeUrl, title: defaultSites[0].title }
-        : tab
-    ));
-  };
+        {/* Hero Title */}
+        <div className="mb-10 select-none">
+          <h1 className="text-4xl md:text-5xl font-bold text-gray-300 tracking-tight">
+            Favorites
+          </h1>
+        </div>
 
-  const getDisplayUrl = () => {
-    try {
-      const url = new URL(currentUrl);
-      return url.hostname + url.pathname;
-    } catch {
-      return currentUrl;
-    }
-  };
-
-  return (
-    <div className="flex flex-col h-full bg-white">
-      {/* Tab Bar */}
-      <div className="flex items-center bg-gray-100 border-b border-gray-200">
-        <div className="flex-1 flex items-center overflow-hidden">
-          {tabs.map((tab) => (
-            <div
-              key={tab.id}
-              className={`flex items-center px-4 py-2 border-r border-gray-200 cursor-pointer min-w-0 max-w-xs group relative ${
-                tab.isActive
-                  ? 'bg-white border-b-2 border-blue-500'
-                  : 'bg-gray-100 hover:bg-gray-50'
-              }`}
-              onClick={() => switchTab(tab.id)}
+        {/* Favorites Grid */}
+        <div className="grid grid-cols-4 gap-x-4 gap-y-6 md:gap-x-10 md:gap-y-8 w-full max-w-xl">
+          {favorites.map((fav) => (
+            <button
+              key={fav.id}
+              onClick={() => navigateTo(fav.url)}
+              className="group flex flex-col items-center space-y-2 focus:outline-none"
             >
-              <span className="text-sm mr-2">{tab.favicon}</span>
-              <span className="text-sm truncate flex-1">{tab.title}</span>
-              {tabs.length > 1 && (
-                <button
-                  className="ml-2 p-1 rounded-full hover:bg-gray-200 opacity-0 group-hover:opacity-100 transition-opacity"
-                  onClick={(e) => closeTab(tab.id, e)}
-                >
-                  <HiX size={12} />
-                </button>
-              )}
-            </div>
+              <div className={`w-14 h-14 md:w-16 md:h-16 rounded-2xl ${fav.color} shadow-sm group-hover:shadow-lg group-hover:-translate-y-1 transition-all duration-300 flex items-center justify-center overflow-hidden relative`}>
+                {/* Glossy reflection effect */}
+                <div className="absolute top-0 left-0 w-full h-1/2 bg-gradient-to-b from-white/20 to-transparent pointer-events-none" />
+                {fav.icon}
+              </div>
+              <span className="text-[11px] md:text-xs font-medium text-gray-500 group-hover:text-gray-900 transition-colors">
+                {fav.title}
+              </span>
+            </button>
           ))}
         </div>
+
+        {/* Privacy Report Section */}
+        <div className="mt-12 w-full max-w-xl">
+          <h2 className="text-sm font-semibold text-gray-800 mb-3 px-1">Privacy Report</h2>
+          <div className="bg-white rounded-xl p-3 shadow-sm border border-gray-200 flex items-center justify-between hover:shadow-md transition-shadow cursor-default">
+            <div className="flex items-center space-x-3">
+              <div className="bg-gray-100 p-2 rounded-lg text-gray-600">
+                <IoShieldCheckmark className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="text-xs font-medium text-gray-900">In the last 7 days</div>
+                <div className="text-[11px] text-gray-500">Safari prevented 42 trackers from profiling you.</div>
+              </div>
+            </div>
+            <div className="hidden md:flex -space-x-2">
+              {[1,2,3].map(i => (
+                <div key={i} className="w-6 h-6 rounded-full bg-gray-100 border-2 border-white flex items-center justify-center text-[8px] text-gray-400 font-bold">
+                  ?
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Reading List Preview */}
+        <div className="mt-6 w-full max-w-xl">
+          <h2 className="text-sm font-semibold text-gray-800 mb-3 px-1">Reading List</h2>
+          <div className="bg-white rounded-xl p-3 shadow-sm border border-gray-200">
+            <div className="text-center py-4 text-gray-400">
+              <span className="text-2xl mb-1 block">📚</span>
+              <p className="text-xs">Your reading list is empty</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  // Error page when iframe is blocked
+  const ErrorPage = () => (
+    <div className="h-full flex flex-col items-center justify-center bg-[#F9F9F9]">
+      <div className="text-center max-w-md px-4">
+        <div className="text-5xl mb-4">🔒</div>
+        <h2 className="text-xl font-semibold text-gray-800 mb-2">Cannot Open Page</h2>
+        <p className="text-gray-500 text-sm mb-5">
+          Safari cannot open "{getDomain(currentUrl)}" because the website restricts embedding.
+        </p>
         <button
-          className="p-2 hover:bg-gray-200 rounded m-1"
-          onClick={createNewTab}
-          title="New Tab"
+          onClick={() => {
+            setShowStartPage(true);
+            setIframeError(false);
+            setCurrentUrl('about:blank');
+            setInputUrl('');
+          }}
+          className="px-5 py-2 bg-blue-500 text-white text-sm rounded-lg hover:bg-blue-600 transition-colors font-medium shadow-sm"
         >
-          <HiPlus size={16} />
+          Go to Start Page
         </button>
       </div>
+    </div>
+  );
 
-      {/* Navigation Bar */}
-      <div className="flex items-center p-2 bg-gray-50 border-b border-gray-200 space-x-2">
-        <div className="flex space-x-1">
+  return (
+    <div className="flex flex-col h-full bg-[#F3F4F6]/85 backdrop-blur-2xl">
+      {/* Safari Toolbar - integrated with traffic lights from Window.tsx */}
+      <div className="h-[52px] flex items-center pl-[72px] pr-3 space-x-2 border-b border-gray-300/40 bg-[#e8e8e8]/90 backdrop-blur-md flex-shrink-0">
+
+        {/* Sidebar Toggle */}
+        <button className="p-1.5 rounded hover:bg-black/5 text-gray-500 transition-colors z-50">
+          <HiOutlineViewGrid className="w-4 h-4" />
+        </button>
+
+        {/* Navigation Controls */}
+        <div className="flex items-center space-x-0.5 text-gray-600 z-50">
           <button
-            className={`p-2 rounded hover:bg-gray-200 transition-colors ${
-              !canGoBack ? 'opacity-50 cursor-not-allowed' : ''
-            }`}
             onClick={goBack}
             disabled={!canGoBack}
-            title="Back"
+            className="p-1.5 rounded hover:bg-black/5 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
           >
-            <IoArrowBack size={16} />
+            <IoChevronBack className="w-4 h-4" />
           </button>
           <button
-            className={`p-2 rounded hover:bg-gray-200 transition-colors ${
-              !canGoForward ? 'opacity-50 cursor-not-allowed' : ''
-            }`}
             onClick={goForward}
             disabled={!canGoForward}
-            title="Forward"
+            className="p-1.5 rounded hover:bg-black/5 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
           >
-            <IoArrowForward size={16} />
+            <IoChevronForward className="w-4 h-4" />
           </button>
-          <button
-            className="p-2 rounded hover:bg-gray-200 transition-colors"
-            onClick={refresh}
-            title="Refresh"
-          >
-            <IoRefresh size={16} className={isLoading ? 'animate-spin' : ''} />
-          </button>
-          <button
-            className="p-2 rounded hover:bg-gray-200 transition-colors"
-            onClick={goHome}
-            title="Home"
-          >
-            <IoHome size={16} />
-          </button>
+        </div>
+
+        {/* Shield / Privacy */}
+        <div className="text-gray-500 z-50">
+          <IoShieldCheckmark className="w-4 h-4" />
         </div>
 
         {/* Address Bar */}
-        <div className="flex-1 relative">
-          <form onSubmit={handleUrlSubmit} className="w-full">
-            <div className="relative flex items-center">
-              <IoLockClosed size={14} className="absolute left-3 text-green-500" />
-              <input
-                type="text"
-                value={inputUrl}
-                onChange={handleInputChange}
-                onFocus={handleInputFocus}
-                className="w-full pl-8 pr-10 py-2 rounded-full border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-sm"
-                placeholder="Search or enter web address"
-              />
-              <IoSearch size={16} className="absolute right-3 text-gray-400" />
+        <form onSubmit={handleUrlSubmit} className="flex-1 max-w-xl mx-auto z-50">
+          <div className={`h-8 bg-white/70 hover:bg-white/90 transition-all rounded-lg flex items-center justify-center relative group cursor-text border ${isUrlFocused ? 'border-blue-400/50 bg-white shadow-sm ring-2 ring-blue-400/20' : 'border-gray-300/60'}`}>
+
+            {/* Left Icon (Lock/Loading) */}
+            <div className="absolute left-2.5 text-gray-400">
+              {isLoading ? (
+                <div className="w-3 h-3 border-[1.5px] border-gray-400 border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <IoLockClosed className="w-3 h-3" />
+              )}
             </div>
-          </form>
+
+            {/* Input */}
+            <input
+              type="text"
+              value={inputUrl}
+              onChange={(e) => setInputUrl(e.target.value)}
+              onFocus={() => setIsUrlFocused(true)}
+              onBlur={() => setIsUrlFocused(false)}
+              placeholder="Search or enter website name"
+              className={`bg-transparent border-none outline-none text-[13px] w-full px-8 text-gray-700 placeholder-gray-400 ${isUrlFocused ? 'text-left' : 'text-center'}`}
+              spellCheck={false}
+            />
+
+            {/* Right Icon (Refresh) */}
+            <button
+              type="button"
+              onClick={handleRefresh}
+              className="absolute right-2.5 text-gray-400 hover:text-gray-600 p-0.5 rounded-full hover:bg-black/5 transition-all opacity-0 group-hover:opacity-100"
+            >
+              <IoReloadOutline className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
+            </button>
+          </div>
+        </form>
+
+        {/* Share & New Tab */}
+        <div className="flex items-center space-x-1 text-gray-500 z-50">
+          <button className="p-1.5 rounded hover:bg-black/5 transition-colors">
+            <IoShareOutline className="w-4 h-4" />
+          </button>
+          <button
+            onClick={createNewTab}
+            className="p-1.5 rounded hover:bg-black/5 transition-colors"
+          >
+            <IoAdd className="w-4.5 h-4.5" />
+          </button>
         </div>
       </div>
 
-      {/* Content Area */}
-      <div className="flex-1 relative bg-white">
-        {isLoading && (
-          <div className="absolute top-0 left-0 w-full h-1 bg-blue-500 animate-pulse z-10"></div>
-        )}
-
-        {iframeError ? (
-          <div className="h-full flex flex-col items-center justify-center bg-gray-50">
-            <div className="text-6xl mb-4">🔒</div>
-            <h2 className="text-2xl font-bold text-gray-700 mb-2">Site Blocked Embedding</h2>
-            <p className="text-gray-500 mb-2">This website (like Google, Facebook, etc.) blocks iframe embedding for security.</p>
-            <p className="text-sm text-gray-400 mb-6">URL: {getDisplayUrl()}</p>
-            <div className="bg-white rounded-lg shadow-md p-6 max-w-md">
-              <h3 className="text-lg font-semibold mb-4">Try These Instead:</h3>
-              <div className="space-y-2">
-                {defaultSites.map((site, index) => (
-                  <button
-                    key={index}
-                    onClick={() => {
-                      setCurrentUrl(site.url);
-                      setInputUrl(site.url);
-                      setIframeError(false);
-                      setTabs(tabs.map(tab =>
-                        tab.isActive
-                          ? { ...tab, url: site.url, title: site.title }
-                          : tab
-                      ));
-                    }}
-                    className="w-full flex items-center space-x-3 p-3 rounded hover:bg-gray-50 transition-colors"
-                  >
-                    <span className="text-xl">{site.favicon}</span>
-                    <span className="text-left">{site.title}</span>
-                  </button>
-                ))}
-              </div>
+      {/* Tab Bar (if multiple tabs) */}
+      {tabs.length > 1 && (
+        <div className="h-8 flex items-center px-2 bg-[#dcdcdc] border-b border-gray-300/40 gap-1 overflow-x-auto flex-shrink-0">
+          {tabs.map((tab) => (
+            <div
+              key={tab.id}
+              onClick={() => switchTab(tab.id)}
+              className={`group flex items-center gap-1.5 px-2.5 py-1 rounded-md cursor-pointer min-w-[80px] max-w-[150px] transition-all ${
+                tab.isActive
+                  ? 'bg-white shadow-sm'
+                  : 'hover:bg-white/50'
+              }`}
+            >
+              <span className="text-[10px] flex-shrink-0">{tab.favicon}</span>
+              <span className="text-[10px] text-gray-700 truncate flex-1">{tab.title}</span>
+              <button
+                onClick={(e) => closeTab(tab.id, e)}
+                className="opacity-0 group-hover:opacity-100 p-0.5 hover:bg-gray-200 rounded transition-opacity"
+              >
+                <IoClose className="w-2.5 h-2.5 text-gray-500" />
+              </button>
             </div>
-          </div>
+          ))}
+        </div>
+      )}
+
+      {/* Content Area */}
+      <div className="flex-1 relative bg-white overflow-hidden">
+        {showStartPage ? (
+          <StartPage />
+        ) : iframeError ? (
+          <ErrorPage />
         ) : (
           <iframe
             src={currentUrl}
             className="w-full h-full border-0"
-            title="Browser Content"
-            onLoad={() => {
-              setIsLoading(false);
-              if (loadTimeout) {
-                clearTimeout(loadTimeout);
-                setLoadTimeout(null);
-              }
-            }}
+            title="Safari Content"
+            onLoad={() => setIsLoading(false)}
             onError={() => {
               setIsLoading(false);
               setIframeError(true);
-              if (loadTimeout) {
-                clearTimeout(loadTimeout);
-                setLoadTimeout(null);
-              }
             }}
-            onLoadStart={() => setIsLoading(true)}
             referrerPolicy="no-referrer"
             sandbox="allow-same-origin allow-scripts allow-popups allow-forms allow-top-navigation"
           />

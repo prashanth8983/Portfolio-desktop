@@ -1,273 +1,205 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+
+type ButtonType = 'number' | 'operator' | 'function';
+type ButtonConfig = {
+  label: string;
+  value: string;
+  type: ButtonType;
+};
 
 export const Calculator: React.FC = () => {
   const [display, setDisplay] = useState('0');
-  const [previousValue, setPreviousValue] = useState<number | null>(null);
-  const [operation, setOperation] = useState<string | null>(null);
+  const [value, setValue] = useState<number | null>(null);
+  const [operator, setOperator] = useState<string | null>(null);
   const [waitingForOperand, setWaitingForOperand] = useState(false);
+  const [lastKeyPressed, setLastKeyPressed] = useState<string>('');
 
-  const inputNumber = (num: string) => {
+  const inputDigit = useCallback((digit: string) => {
     if (waitingForOperand) {
-      setDisplay(num);
+      setDisplay(digit);
       setWaitingForOperand(false);
     } else {
-      setDisplay(display === '0' ? num : display + num);
+      if (display.replace(/[^0-9]/g, '').length >= 9) return;
+      setDisplay(display === '0' ? digit : display + digit);
     }
-  };
+  }, [display, waitingForOperand]);
 
-  const inputDecimal = () => {
+  const inputDot = useCallback(() => {
     if (waitingForOperand) {
       setDisplay('0.');
       setWaitingForOperand(false);
     } else if (display.indexOf('.') === -1) {
       setDisplay(display + '.');
     }
-  };
+  }, [display, waitingForOperand]);
 
-  const clear = () => {
+  const clearDisplay = useCallback(() => {
     setDisplay('0');
-    setPreviousValue(null);
-    setOperation(null);
-    setWaitingForOperand(false);
-  };
+    setLastKeyPressed('');
+    if (display === '0' && lastKeyPressed !== '=') {
+      setValue(null);
+      setOperator(null);
+      setWaitingForOperand(false);
+    }
+  }, [display, lastKeyPressed]);
 
-  const performOperation = (nextOperation: string) => {
+  const toggleSign = useCallback(() => {
+    const newValue = parseFloat(display) * -1;
+    setDisplay(String(newValue));
+  }, [display]);
+
+  const inputPercent = useCallback(() => {
+    const currentValue = parseFloat(display);
+    if (currentValue === 0) return;
+    const newValue = currentValue / 100;
+    setDisplay(String(newValue));
+  }, [display]);
+
+  const calculate = useCallback((left: number, right: number, op: string): number => {
+    switch (op) {
+      case '/': return right === 0 ? NaN : left / right;
+      case '*': return left * right;
+      case '+': return left + right;
+      case '-': return left - right;
+      case '=': return right;
+      default: return right;
+    }
+  }, []);
+
+  const performOperation = useCallback((nextOperator: string) => {
     const inputValue = parseFloat(display);
 
-    if (previousValue === null) {
-      setPreviousValue(inputValue);
-    } else if (operation) {
-      const currentValue = previousValue || 0;
-      const newValue = calculate(currentValue, inputValue, operation);
-
+    if (value === null) {
+      setValue(inputValue);
+    } else if (operator) {
+      const currentValue = value || 0;
+      const newValue = calculate(currentValue, inputValue, operator);
+      setValue(newValue);
       setDisplay(String(newValue));
-      setPreviousValue(newValue);
     }
 
     setWaitingForOperand(true);
-    setOperation(nextOperation);
-  };
+    setOperator(nextOperator);
+  }, [display, value, operator, calculate]);
 
-  const calculate = (firstValue: number, secondValue: number, operation: string): number => {
-    switch (operation) {
-      case '+':
-        return firstValue + secondValue;
-      case '-':
-        return firstValue - secondValue;
-      case '×':
-        return firstValue * secondValue;
-      case '÷':
-        return firstValue / secondValue;
-      case '=':
-        return secondValue;
-      default:
-        return secondValue;
+  const formatDisplay = (numStr: string): string => {
+    const num = parseFloat(numStr);
+    if (isNaN(num)) return 'Error';
+
+    if (numStr.length > 9) {
+      return num.toPrecision(6).toString().replace('+', '');
     }
+
+    const parts = numStr.split('.');
+    parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    return parts.join('.');
   };
 
-  const handleKeyPress = (e: KeyboardEvent) => {
-    const { key } = e;
+  const getFontSize = (): string => {
+    const len = display.length;
+    if (len > 8) return 'text-4xl';
+    if (len > 6) return 'text-5xl';
+    return 'text-6xl';
+  };
 
-    if (key >= '0' && key <= '9') {
-      inputNumber(key);
+  const handleKeyDown = useCallback((event: KeyboardEvent) => {
+    let { key } = event;
+
+    if (key === 'Enter') key = '=';
+    if (key === '/') event.preventDefault();
+
+    if (/\d/.test(key)) {
+      inputDigit(key);
     } else if (key === '.') {
-      inputDecimal();
-    } else if (key === '+') {
-      performOperation('+');
-    } else if (key === '-') {
-      performOperation('-');
-    } else if (key === '*') {
-      performOperation('×');
-    } else if (key === '/') {
-      e.preventDefault();
-      performOperation('÷');
-    } else if (key === 'Enter' || key === '=') {
+      inputDot();
+    } else if (key === '=' || key === 'Enter') {
       performOperation('=');
-    } else if (key === 'Escape' || key === 'c' || key === 'C') {
-      clear();
+    } else if (key === 'Backspace') {
+      setDisplay(display.length > 1 ? display.slice(0, -1) : '0');
+    } else if (key === 'Escape') {
+      clearDisplay();
+    } else if (['+', '-', '*', '/'].includes(key)) {
+      performOperation(key);
+    } else if (key === '%') {
+      inputPercent();
     }
-  };
+    setLastKeyPressed(key);
+  }, [display, inputDigit, inputDot, performOperation, clearDisplay, inputPercent]);
 
   useEffect(() => {
-    document.addEventListener('keydown', handleKeyPress);
-    return () => document.removeEventListener('keydown', handleKeyPress);
-  }, [display, operation, previousValue, waitingForOperand]);
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleKeyDown]);
 
-  const Button: React.FC<{
-    onClick: () => void;
-    className?: string;
-    children: React.ReactNode;
-  }> = ({ onClick, className = '', children }) => (
-    <button
-      onClick={onClick}
-      className={`h-12 rounded-lg font-medium text-lg transition-all duration-150 active:scale-95 ${className}`}
-    >
-      {children}
-    </button>
-  );
+  const getButtonClass = (btn: ButtonConfig): string => {
+    const base = "h-16 rounded-full flex items-center justify-center text-2xl font-normal transition-all duration-75 select-none shadow-[0_1px_1px_rgba(0,0,0,0.2)]";
+
+    if (btn.type === 'function') {
+      return `${base} bg-[#a5a5a5] text-black active:bg-[#c8c8c8] hover:bg-[#b8b8b8]`;
+    }
+    if (btn.type === 'operator') {
+      const isActive = operator === btn.value && waitingForOperand;
+      return `${base} ${isActive ? 'bg-white text-[#FF9F0A]' : 'bg-[#FF9F0A] text-white hover:bg-[#ffb340]'} active:bg-[#cc7f08]`;
+    }
+    if (btn.value === '0') {
+      return `${base} col-span-2 justify-start pl-7 bg-[#333333] text-white active:bg-[#5a5a5a] hover:bg-[#444444]`;
+    }
+    return `${base} bg-[#333333] text-white active:bg-[#5a5a5a] hover:bg-[#444444]`;
+  };
+
+  const buttons: ButtonConfig[] = [
+    { label: display === '0' && value === null ? 'AC' : 'C', value: 'clear', type: 'function' },
+    { label: '±', value: 'sign', type: 'function' },
+    { label: '%', value: 'percent', type: 'function' },
+    { label: '÷', value: '/', type: 'operator' },
+    { label: '7', value: '7', type: 'number' },
+    { label: '8', value: '8', type: 'number' },
+    { label: '9', value: '9', type: 'number' },
+    { label: '×', value: '*', type: 'operator' },
+    { label: '4', value: '4', type: 'number' },
+    { label: '5', value: '5', type: 'number' },
+    { label: '6', value: '6', type: 'number' },
+    { label: '−', value: '-', type: 'operator' },
+    { label: '1', value: '1', type: 'number' },
+    { label: '2', value: '2', type: 'number' },
+    { label: '3', value: '3', type: 'number' },
+    { label: '+', value: '+', type: 'operator' },
+    { label: '0', value: '0', type: 'number' },
+    { label: '.', value: '.', type: 'number' },
+    { label: '=', value: '=', type: 'operator' },
+  ];
+
+  const handleButtonClick = (btn: ButtonConfig) => {
+    if (btn.value === 'clear') clearDisplay();
+    else if (btn.value === 'sign') toggleSign();
+    else if (btn.value === 'percent') inputPercent();
+    else if (btn.type === 'operator') performOperation(btn.value);
+    else if (btn.value === '.') inputDot();
+    else inputDigit(btn.value);
+
+    setLastKeyPressed(btn.value);
+  };
 
   return (
-    <div className="bg-gray-900 text-white p-4 rounded-lg w-80 shadow-2xl">
-      {/* Display */}
-      <div className="bg-black rounded-lg p-4 mb-4 text-right">
-        <div className="text-3xl font-light overflow-hidden">
-          {display.length > 12 ? parseFloat(display).toExponential(6) : display}
-        </div>
+    <div className="h-full w-full bg-[#1c1c1c] flex flex-col">
+      {/* Display Area */}
+      <div className="flex-1 flex items-end justify-end px-6 pb-2 min-h-[80px]">
+        <span className={`text-white font-light tracking-tight transition-all duration-100 ${getFontSize()}`}>
+          {formatDisplay(display)}
+        </span>
       </div>
 
-      {/* Buttons */}
-      <div className="grid grid-cols-4 gap-2">
-        {/* Row 1 */}
-        <Button
-          onClick={clear}
-          className="bg-gray-600 hover:bg-gray-500 text-black"
-        >
-          AC
-        </Button>
-        <Button
-          onClick={() => {
-            if (display !== '0') {
-              setDisplay(display.slice(0, -1) || '0');
-            }
-          }}
-          className="bg-gray-600 hover:bg-gray-500 text-black"
-        >
-          ⌫
-        </Button>
-        <Button
-          onClick={() => {
-            const value = parseFloat(display) / 100;
-            setDisplay(String(value));
-          }}
-          className="bg-gray-600 hover:bg-gray-500 text-black"
-        >
-          %
-        </Button>
-        <Button
-          onClick={() => performOperation('÷')}
-          className={`${
-            operation === '÷'
-              ? 'bg-white text-orange-500'
-              : 'bg-orange-500 hover:bg-orange-400'
-          }`}
-        >
-          ÷
-        </Button>
-
-        {/* Row 2 */}
-        <Button
-          onClick={() => inputNumber('7')}
-          className="bg-gray-700 hover:bg-gray-600"
-        >
-          7
-        </Button>
-        <Button
-          onClick={() => inputNumber('8')}
-          className="bg-gray-700 hover:bg-gray-600"
-        >
-          8
-        </Button>
-        <Button
-          onClick={() => inputNumber('9')}
-          className="bg-gray-700 hover:bg-gray-600"
-        >
-          9
-        </Button>
-        <Button
-          onClick={() => performOperation('×')}
-          className={`${
-            operation === '×'
-              ? 'bg-white text-orange-500'
-              : 'bg-orange-500 hover:bg-orange-400'
-          }`}
-        >
-          ×
-        </Button>
-
-        {/* Row 3 */}
-        <Button
-          onClick={() => inputNumber('4')}
-          className="bg-gray-700 hover:bg-gray-600"
-        >
-          4
-        </Button>
-        <Button
-          onClick={() => inputNumber('5')}
-          className="bg-gray-700 hover:bg-gray-600"
-        >
-          5
-        </Button>
-        <Button
-          onClick={() => inputNumber('6')}
-          className="bg-gray-700 hover:bg-gray-600"
-        >
-          6
-        </Button>
-        <Button
-          onClick={() => performOperation('-')}
-          className={`${
-            operation === '-'
-              ? 'bg-white text-orange-500'
-              : 'bg-orange-500 hover:bg-orange-400'
-          }`}
-        >
-          −
-        </Button>
-
-        {/* Row 4 */}
-        <Button
-          onClick={() => inputNumber('1')}
-          className="bg-gray-700 hover:bg-gray-600"
-        >
-          1
-        </Button>
-        <Button
-          onClick={() => inputNumber('2')}
-          className="bg-gray-700 hover:bg-gray-600"
-        >
-          2
-        </Button>
-        <Button
-          onClick={() => inputNumber('3')}
-          className="bg-gray-700 hover:bg-gray-600"
-        >
-          3
-        </Button>
-        <Button
-          onClick={() => performOperation('+')}
-          className={`${
-            operation === '+'
-              ? 'bg-white text-orange-500'
-              : 'bg-orange-500 hover:bg-orange-400'
-          }`}
-        >
-          +
-        </Button>
-
-        {/* Row 5 */}
-        <Button
-          onClick={() => inputNumber('0')}
-          className="bg-gray-700 hover:bg-gray-600 col-span-2"
-        >
-          0
-        </Button>
-        <Button
-          onClick={inputDecimal}
-          className="bg-gray-700 hover:bg-gray-600"
-        >
-          .
-        </Button>
-        <Button
-          onClick={() => performOperation('=')}
-          className="bg-orange-500 hover:bg-orange-400"
-        >
-          =
-        </Button>
-      </div>
-
-      {/* Keyboard shortcuts info */}
-      <div className="mt-4 text-xs text-gray-400 text-center">
-        Keyboard shortcuts: Numbers, +, -, *, /, Enter, Escape
+      {/* Buttons Grid */}
+      <div className="grid grid-cols-4 gap-3 p-4">
+        {buttons.map((btn) => (
+          <button
+            key={btn.value}
+            onClick={() => handleButtonClick(btn)}
+            className={getButtonClass(btn)}
+          >
+            {btn.label}
+          </button>
+        ))}
       </div>
     </div>
   );

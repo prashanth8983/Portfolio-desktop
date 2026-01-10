@@ -1,325 +1,270 @@
 import React, { useState, useRef } from 'react';
-import { IoSave, IoFolderOpen, IoPrint, IoSearch } from 'react-icons/io5';
-import { FaBold, FaItalic, FaUnderline, FaAlignLeft, FaAlignCenter, FaAlignRight } from 'react-icons/fa';
+import {
+  FaBold, FaItalic, FaUnderline,
+  FaAlignLeft, FaAlignCenter, FaAlignRight,
+  FaChevronDown
+} from 'react-icons/fa';
 
-export const TextEditor: React.FC = () => {
-  const [content, setContent] = useState('Welcome to TextEdit\n\nStart typing your document here...');
-  const [fontSize, setFontSize] = useState(14);
-  const [fontFamily, setFontFamily] = useState('system-ui');
-  const [isBold, setIsBold] = useState(false);
-  const [isItalic, setIsItalic] = useState(false);
-  const [isUnderline, setIsUnderline] = useState(false);
-  const [textAlign, setTextAlign] = useState('left');
-  const [fileName, setFileName] = useState('Untitled');
-  const [isModified, setIsModified] = useState(false);
-  const [wordCount, setWordCount] = useState(0);
-  const [showSearch, setShowSearch] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
+interface TextEditorProps {
+  onClose?: () => void;
+  onMinimize?: () => void;
+  onMaximize?: () => void;
+}
 
-  const textAreaRef = useRef<HTMLTextAreaElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+export const TextEditor: React.FC<TextEditorProps> = ({
+  onClose,
+  onMinimize,
+  onMaximize,
+}) => {
+  const [content, setContent] = useState('<p style="margin-bottom: 1em;"><b>Hello, World!</b></p><p style="margin-bottom: 1em;">This is a realistic macOS-style TextEdit replica.</p><p style="margin-bottom: 1em;">It features a <i>rich text</i> environment, proper page layout, and the authentic "Big Sur" aesthetic.</p>');
+  const [activeFormats, setActiveFormats] = useState<string[]>([]);
+  const [font, setFont] = useState('Helvetica');
+  const [fontSize, setFontSize] = useState('14px');
+  const editorRef = useRef<HTMLDivElement>(null);
 
-  const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const newContent = e.target.value;
-    setContent(newContent);
-    setIsModified(true);
-
-    // Count words
-    const words = newContent.trim().split(/\s+/).filter(word => word.length > 0);
-    setWordCount(words.length);
+  // Execute standard editing commands
+  const format = (command: string, value: string | undefined = undefined) => {
+    document.execCommand(command, false, value);
+    checkFormats();
+    editorRef.current?.focus();
   };
 
-  const handleSave = () => {
-    const blob = new Blob([content], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${fileName}.txt`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    setIsModified(false);
+  // Check cursor position
+  const checkFormats = () => {
+    const formats = [];
+    if (document.queryCommandState('bold')) formats.push('bold');
+    if (document.queryCommandState('italic')) formats.push('italic');
+    if (document.queryCommandState('underline')) formats.push('underline');
+    if (document.queryCommandState('justifyLeft')) formats.push('justifyLeft');
+    if (document.queryCommandState('justifyCenter')) formats.push('justifyCenter');
+    if (document.queryCommandState('justifyRight')) formats.push('justifyRight');
+    setActiveFormats(formats);
   };
 
-  const handleOpen = () => {
-    fileInputRef.current?.click();
+  // Handle Font Change
+  const handleFontChange = (newFont: string) => {
+    setFont(newFont);
+    format('fontName', newFont);
   };
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const text = event.target?.result as string;
-        setContent(text);
-        setFileName(file.name.replace(/\.[^/.]+$/, ''));
-        setIsModified(false);
-
-        // Count words
-        const words = text.trim().split(/\s+/).filter(word => word.length > 0);
-        setWordCount(words.length);
-      };
-      reader.readAsText(file);
-    }
-  };
-
-  const handlePrint = () => {
-    const printWindow = window.open('', '_blank');
-    if (printWindow) {
-      printWindow.document.write(`
-        <html>
-          <head>
-            <title>${fileName}</title>
-            <style>
-              body {
-                font-family: ${fontFamily};
-                font-size: ${fontSize}px;
-                line-height: 1.6;
-                margin: 20px;
-                white-space: pre-wrap;
-              }
-            </style>
-          </head>
-          <body>${content}</body>
-        </html>
-      `);
-      printWindow.document.close();
-      printWindow.print();
-    }
-  };
-
-
-  const formatText = (format: string) => {
-    switch (format) {
-      case 'bold':
-        setIsBold(!isBold);
-        break;
-      case 'italic':
-        setIsItalic(!isItalic);
-        break;
-      case 'underline':
-        setIsUnderline(!isUnderline);
-        break;
-    }
-  };
-
-
-  const textStyle = {
-    fontSize: `${fontSize}px`,
-    fontFamily,
-    fontWeight: isBold ? 'bold' : 'normal',
-    fontStyle: isItalic ? 'italic' : 'normal',
-    textDecoration: isUnderline ? 'underline' : 'none',
-    textAlign: textAlign as 'left' | 'center' | 'right',
+  // Handle Size Change
+  const handleSizeChange = (newSize: string) => {
+    let sizeVal = "3";
+    if (newSize === '12px') sizeVal = "3";
+    if (newSize === '14px') sizeVal = "4";
+    if (newSize === '18px') sizeVal = "5";
+    if (newSize === '24px') sizeVal = "6";
+    format('fontSize', sizeVal);
+    setFontSize(newSize);
   };
 
   return (
-    <div className="flex flex-col h-full bg-white text-gray-900">
-      {/* Menu Bar */}
-      <div className="flex items-center justify-between px-4 py-2 bg-gray-100 border-b border-gray-200">
-        <div className="flex items-center space-x-4">
+    <div className="flex flex-col h-full bg-[#F6F6F6] font-sans select-none overflow-hidden rounded-xl border border-black/10 ring-1 ring-black/20">
+
+      {/* Title Bar */}
+      <div className="h-12 bg-[#F6F6F6] flex items-center px-4 justify-between shrink-0 relative draggable-region">
+        {/* Traffic Lights */}
+        <div className="flex space-x-2 group z-10 traffic-lights">
           <button
-            onClick={handleSave}
-            className="flex items-center space-x-1 px-3 py-1 rounded hover:bg-gray-200 transition-colors"
-            title="Save (Cmd+S)"
-          >
-            <IoSave size={16} />
-            <span className="text-sm">Save</span>
-          </button>
-
-          <button
-            onClick={handleOpen}
-            className="flex items-center space-x-1 px-3 py-1 rounded hover:bg-gray-200 transition-colors"
-            title="Open"
-          >
-            <IoFolderOpen size={16} />
-            <span className="text-sm">Open</span>
-          </button>
-
-          <button
-            onClick={handlePrint}
-            className="flex items-center space-x-1 px-3 py-1 rounded hover:bg-gray-200 transition-colors"
-            title="Print"
-          >
-            <IoPrint size={16} />
-            <span className="text-sm">Print</span>
-          </button>
-
-          <div className="w-px h-6 bg-gray-300"></div>
-
-          <button
-            onClick={() => setShowSearch(!showSearch)}
-            className={`flex items-center space-x-1 px-3 py-1 rounded transition-colors ${
-              showSearch ? 'bg-blue-100 text-blue-600' : 'hover:bg-gray-200'
-            }`}
-            title="Search"
-          >
-            <IoSearch size={16} />
-          </button>
-        </div>
-
-        <div className="flex items-center space-x-2">
-          <span className="text-sm text-gray-600">
-            {fileName}{isModified ? ' •' : ''}
-          </span>
-        </div>
-      </div>
-
-      {/* Search Bar */}
-      {showSearch && (
-        <div className="flex items-center px-4 py-2 bg-yellow-50 border-b border-yellow-200">
-          <IoSearch size={16} className="text-gray-400 mr-2" />
-          <input
-            type="text"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Search in document..."
-            className="flex-1 bg-transparent outline-none text-sm"
-          />
-          <button
-            onClick={() => {
-              setShowSearch(false);
-              setSearchTerm('');
+            onClick={(e) => {
+              e.stopPropagation();
+              onClose?.();
             }}
-            className="ml-2 text-gray-400 hover:text-gray-600"
+            className="w-3 h-3 rounded-full bg-[#FF5F57] border-[0.5px] border-[#E0443E] flex items-center justify-center shadow-sm hover:brightness-90 transition-all"
           >
-            ×
+            <span className="opacity-0 group-hover:opacity-100 text-[8px] font-bold text-black/50">✕</span>
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onMinimize?.();
+            }}
+            className="w-3 h-3 rounded-full bg-[#FEBC2E] border-[0.5px] border-[#D3A125] flex items-center justify-center shadow-sm hover:brightness-90 transition-all"
+          >
+            <span className="opacity-0 group-hover:opacity-100 text-[8px] font-bold text-black/50">−</span>
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onMaximize?.();
+            }}
+            className="w-3 h-3 rounded-full bg-[#28C840] border-[0.5px] border-[#1AAB29] flex items-center justify-center shadow-sm hover:brightness-90 transition-all"
+          >
+            <span className="opacity-0 group-hover:opacity-100 text-[8px] font-bold text-black/50">+</span>
           </button>
         </div>
-      )}
 
-      {/* Formatting Toolbar */}
-      <div className="flex items-center justify-between px-4 py-2 bg-gray-50 border-b border-gray-200">
-        <div className="flex items-center space-x-4">
-          {/* Font Controls */}
+        {/* Title with Icon */}
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+          <div className="flex items-center space-x-2 opacity-90">
+            <div className="w-4 h-5 bg-white border border-gray-300 rounded-[2px] flex items-center justify-center shadow-sm">
+              <span className="text-[6px] font-bold text-gray-400">TXT</span>
+            </div>
+            <span className="text-sm font-semibold text-gray-700 tracking-tight">Untitled</span>
+            <span className="text-xs text-gray-400 font-medium translate-y-[1px]"> — Edited</span>
+          </div>
+        </div>
+
+        <div className="w-16"></div>
+      </div>
+
+      {/* Toolbar */}
+      <div className="h-10 bg-[#F6F6F6] border-b border-[#D6D6D6] flex items-center px-4 space-x-3 shrink-0">
+
+        {/* Font Family Dropdown */}
+        <div className="relative group">
           <select
-            value={fontFamily}
-            onChange={(e) => setFontFamily(e.target.value)}
-            className="text-sm border border-gray-300 rounded px-2 py-1"
+            value={font}
+            onChange={(e) => handleFontChange(e.target.value)}
+            className="appearance-none text-xs font-medium border border-gray-300 rounded-[4px] pl-2 pr-6 py-1 bg-white shadow-sm outline-none focus:ring-1 focus:ring-blue-500 min-w-[100px] cursor-pointer"
           >
-            <option value="system-ui">System</option>
+            <option value="Helvetica">Helvetica</option>
+            <option value="Times New Roman">Times New Roman</option>
+            <option value="Courier New">Courier New</option>
             <option value="Arial">Arial</option>
-            <option value="Times New Roman">Times</option>
-            <option value="Courier New">Courier</option>
-            <option value="Georgia">Georgia</option>
-            <option value="Verdana">Verdana</option>
           </select>
-
-          <input
-            type="number"
-            value={fontSize}
-            onChange={(e) => setFontSize(parseInt(e.target.value) || 14)}
-            min="8"
-            max="72"
-            className="w-16 text-sm border border-gray-300 rounded px-2 py-1"
-          />
-
-          <div className="w-px h-6 bg-gray-300"></div>
-
-          {/* Text Formatting */}
-          <button
-            onClick={() => formatText('bold')}
-            className={`p-2 rounded transition-colors ${
-              isBold ? 'bg-blue-100 text-blue-600' : 'hover:bg-gray-200'
-            }`}
-            title="Bold"
-          >
-            <FaBold size={14} />
-          </button>
-
-          <button
-            onClick={() => formatText('italic')}
-            className={`p-2 rounded transition-colors ${
-              isItalic ? 'bg-blue-100 text-blue-600' : 'hover:bg-gray-200'
-            }`}
-            title="Italic"
-          >
-            <FaItalic size={14} />
-          </button>
-
-          <button
-            onClick={() => formatText('underline')}
-            className={`p-2 rounded transition-colors ${
-              isUnderline ? 'bg-blue-100 text-blue-600' : 'hover:bg-gray-200'
-            }`}
-            title="Underline"
-          >
-            <FaUnderline size={14} />
-          </button>
-
-          <div className="w-px h-6 bg-gray-300"></div>
-
-          {/* Text Alignment */}
-          <button
-            onClick={() => setTextAlign('left')}
-            className={`p-2 rounded transition-colors ${
-              textAlign === 'left' ? 'bg-blue-100 text-blue-600' : 'hover:bg-gray-200'
-            }`}
-            title="Align Left"
-          >
-            <FaAlignLeft size={14} />
-          </button>
-
-          <button
-            onClick={() => setTextAlign('center')}
-            className={`p-2 rounded transition-colors ${
-              textAlign === 'center' ? 'bg-blue-100 text-blue-600' : 'hover:bg-gray-200'
-            }`}
-            title="Align Center"
-          >
-            <FaAlignCenter size={14} />
-          </button>
-
-          <button
-            onClick={() => setTextAlign('right')}
-            className={`p-2 rounded transition-colors ${
-              textAlign === 'right' ? 'bg-blue-100 text-blue-600' : 'hover:bg-gray-200'
-            }`}
-            title="Align Right"
-          >
-            <FaAlignRight size={14} />
-          </button>
+          <FaChevronDown size={8} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
         </div>
 
-        <div className="text-sm text-gray-500">
-          Words: {wordCount}
+        {/* Font Size Dropdown */}
+        <div className="relative">
+          <select
+            value={fontSize}
+            onChange={(e) => handleSizeChange(e.target.value)}
+            className="appearance-none text-xs font-medium border border-gray-300 rounded-[4px] pl-2 pr-5 py-1 bg-white shadow-sm outline-none focus:ring-1 focus:ring-blue-500 w-[50px] cursor-pointer"
+          >
+            <option value="12px">12</option>
+            <option value="14px">14</option>
+            <option value="18px">18</option>
+            <option value="24px">24</option>
+          </select>
+          <FaChevronDown size={8} className="absolute right-1.5 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
+        </div>
+
+        <div className="w-px h-5 bg-gray-300/50 mx-1"></div>
+
+        {/* Formatting Buttons */}
+        <div className="flex bg-white/50 rounded-md border border-gray-200/50 p-0.5 space-x-0.5">
+          <ToolbarButton
+            icon={<FaBold size={12} />}
+            isActive={activeFormats.includes('bold')}
+            onClick={() => format('bold')}
+          />
+          <ToolbarButton
+            icon={<FaItalic size={12} />}
+            isActive={activeFormats.includes('italic')}
+            onClick={() => format('italic')}
+          />
+          <ToolbarButton
+            icon={<FaUnderline size={12} />}
+            isActive={activeFormats.includes('underline')}
+            onClick={() => format('underline')}
+          />
+        </div>
+
+        <div className="w-px h-5 bg-gray-300/50 mx-1"></div>
+
+        {/* Alignment Buttons */}
+        <div className="flex bg-white/50 rounded-md border border-gray-200/50 p-0.5 space-x-0.5">
+          <ToolbarButton
+            icon={<FaAlignLeft size={12} />}
+            isActive={activeFormats.includes('justifyLeft')}
+            onClick={() => format('justifyLeft')}
+          />
+          <ToolbarButton
+            icon={<FaAlignCenter size={12} />}
+            isActive={activeFormats.includes('justifyCenter')}
+            onClick={() => format('justifyCenter')}
+          />
+          <ToolbarButton
+            icon={<FaAlignRight size={12} />}
+            isActive={activeFormats.includes('justifyRight')}
+            onClick={() => format('justifyRight')}
+          />
         </div>
       </div>
 
-      {/* Text Area */}
-      <div className="flex-1 relative">
-        <textarea
-          ref={textAreaRef}
-          value={content}
-          onChange={handleContentChange}
-          style={textStyle}
-          className="w-full h-full p-4 resize-none outline-none bg-white"
-          placeholder="Start typing your document..."
-          spellCheck={true}
+      {/* Ruler */}
+      <div className="h-7 bg-[#FBFBFB] border-b border-[#D6D6D6] flex items-end relative overflow-hidden shrink-0 shadow-[inset_0_1px_2px_rgba(0,0,0,0.02)]">
+        <div className="w-full h-full relative mx-auto max-w-[800px] border-l border-r border-gray-200 bg-[#FBFBFB]">
+          {[...Array(30)].map((_, i) => (
+            <div key={i} className="absolute bottom-0 h-1.5 w-px bg-gray-300" style={{left: `${i * 3.4}%`}}>
+              {i % 2 === 0 && i !== 0 && (
+                <span className="absolute -top-3.5 -left-1 text-[9px] text-gray-400 font-medium select-none">{i/2}</span>
+              )}
+            </div>
+          ))}
+          {/* Left Margin Indicator */}
+          <div className="absolute top-0 left-0 w-full h-full pointer-events-none">
+            <div className="absolute top-0 left-0 w-4 h-full bg-gray-100/50 border-r border-gray-200/50"></div>
+            <div className="absolute top-0 right-0 w-4 h-full bg-gray-100/50 border-l border-gray-200/50"></div>
+          </div>
+        </div>
+      </div>
+
+      {/* Editor Area (Scrollable Container) */}
+      <div
+        className="flex-1 bg-[#EBEBEB] overflow-y-auto cursor-text flex justify-center py-8 relative focus:outline-none textedit-scrollarea"
+        onClick={() => editorRef.current?.focus()}
+      >
+        {/* The 'Paper' Page */}
+        <div
+          ref={editorRef}
+          className="bg-white w-full max-w-[800px] min-h-[1050px] shadow-sm px-16 py-12 outline-none text-gray-900 leading-relaxed text-base focus:outline-none selection:bg-blue-200"
+          contentEditable
+          suppressContentEditableWarning
+          onInput={(e) => setContent(e.currentTarget.innerHTML)}
+          onSelect={checkFormats}
+          onKeyUp={checkFormats}
+          onMouseUp={checkFormats}
+          style={{
+            boxShadow: '0 2px 8px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.1)',
+            fontFamily: font,
+          }}
+          dangerouslySetInnerHTML={{ __html: content }}
         />
       </div>
 
-      {/* Status Bar */}
-      <div className="flex items-center justify-between px-4 py-1 bg-gray-100 border-t border-gray-200 text-xs text-gray-600">
-        <div className="flex items-center space-x-4">
-          <span>Lines: {content.split('\n').length}</span>
-          <span>Characters: {content.length}</span>
-          <span>Words: {wordCount}</span>
-        </div>
-        <div>
-          {isModified ? 'Modified' : 'Saved'}
-        </div>
+      {/* Footer (Status Bar) */}
+      <div className="h-6 bg-[#F6F6F6] border-t border-[#D1D1D1] flex items-center justify-between px-3 text-[10px] text-gray-500 font-medium select-none">
+        <span className="cursor-default hover:text-gray-800">100%</span>
+        <span className="cursor-default hover:text-gray-800">UTF-8</span>
       </div>
 
-      {/* Hidden file input */}
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept=".txt,.md,.js,.ts,.json,.css,.html"
-        onChange={handleFileSelect}
-        className="hidden"
-      />
+      {/* Custom scrollbar styles */}
+      <style>{`
+        .textedit-scrollarea::-webkit-scrollbar {
+          width: 10px;
+          height: 10px;
+        }
+        .textedit-scrollarea::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        .textedit-scrollarea::-webkit-scrollbar-thumb {
+          background: #C1C1C1;
+          border-radius: 5px;
+          border: 2px solid #EBEBEB;
+        }
+        .textedit-scrollarea::-webkit-scrollbar-thumb:hover {
+          background: #A8A8A8;
+        }
+      `}</style>
     </div>
   );
 };
+
+// Helper Component for Toolbar Buttons
+const ToolbarButton = ({ icon, isActive, onClick }: { icon: React.ReactNode, isActive: boolean, onClick: () => void }) => (
+  <button
+    className={`p-1.5 rounded-[4px] transition-all duration-75 ${
+      isActive
+        ? 'bg-[#DCDCDC] text-black shadow-inner'
+        : 'text-gray-700 hover:bg-[#E5E5E5] active:bg-[#DCDCDC] active:shadow-inner'
+    }`}
+    onMouseDown={(e) => { e.preventDefault(); onClick(); }}
+  >
+    {icon}
+  </button>
+);
+
+export default TextEditor;

@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { profile, skills, projects, experience, education } from '../data/portfolio';
 
 interface CommandHistoryItem {
   command: string;
@@ -43,7 +44,7 @@ export const Terminal: React.FC = () => {
       <div className="space-y-1">
         <div>These shell commands are defined internally. Type `help` to see this list.</div>
         <div>
-          <span className="text-green-400">about</span> - About Prashanth Kumar
+          <span className="text-green-400">about</span> - About {profile.name}
         </div>
         <div>
           <span className="text-green-400">skills</span> - Technical skills and expertise
@@ -76,6 +77,9 @@ export const Terminal: React.FC = () => {
           <span className="text-green-400">cat [file]</span> - Read a file
         </div>
         <div>
+          <span className="text-green-400">open [app]</span> - Open an application
+        </div>
+        <div>
           <span className="text-green-400">clear</span> - Clear terminal
         </div>
         <div>
@@ -84,18 +88,20 @@ export const Terminal: React.FC = () => {
         <div>
           <span className="text-green-400">whoami</span> - Display current user
         </div>
+        <div>
+          <span className="text-green-400">matrix</span> - Enter the Matrix
+        </div>
       </div>
     ),
     about: () => (
       <div className="space-y-2">
         <div className="text-cyan-400">👨‍💻 About Me</div>
         <div className="ml-4">
-          <div>Name: Prashanth Kumar</div>
-          <div>Role: Full-Stack Developer</div>
-          <div>Location: [Your Location]</div>
-          <div className="mt-2">
-            Passionate developer with expertise in building modern web applications.
-            Specializing in React, TypeScript, and creating unique user experiences.
+          <div>Name: {profile.name}</div>
+          <div>Role: {profile.role}</div>
+          <div>Location: {profile.location}</div>
+          <div className="mt-2 whitespace-pre-wrap">
+            {profile.about}
           </div>
         </div>
       </div>
@@ -106,19 +112,15 @@ export const Terminal: React.FC = () => {
         <div className="ml-4 space-y-3">
           <div>
             <div className="text-yellow-400">Frontend:</div>
-            <div className="ml-4">React, TypeScript, JavaScript, Tailwind CSS, HTML5, CSS3</div>
+            <div className="ml-4">{skills.frontend.join(', ')}</div>
           </div>
           <div>
             <div className="text-yellow-400">Backend:</div>
-            <div className="ml-4">Node.js, Express, REST APIs</div>
+            <div className="ml-4">{skills.backend.join(', ')}</div>
           </div>
           <div>
-            <div className="text-yellow-400">Tools & Technologies:</div>
-            <div className="ml-4">Git, GitHub, Vite, npm, VS Code</div>
-          </div>
-          <div>
-            <div className="text-yellow-400">Other:</div>
-            <div className="ml-4">Responsive Design, UI/UX, Performance Optimization</div>
+            <div className="text-yellow-400">Tools:</div>
+            <div className="ml-4">{skills.tools.join(', ')}</div>
           </div>
         </div>
       </div>
@@ -127,20 +129,15 @@ export const Terminal: React.FC = () => {
       <div className="space-y-2">
         <div className="text-cyan-400">🚀 Featured Projects</div>
         <div className="ml-4 space-y-3">
-          <div>
-            <div className="text-green-400">1. Portfolio Desktop</div>
-            <div className="ml-4 text-sm">
-              <div>Interactive macOS/iOS simulator as portfolio</div>
-              <div className="text-gray-400">Tech: React 19, TypeScript, Tailwind CSS</div>
+          {projects.map((p, i) => (
+            <div key={p.id}>
+              <div className="text-green-400">{i + 1}. {p.title}</div>
+              <div className="ml-4 text-sm">
+                <div>{p.description}</div>
+                <div className="text-gray-400">Tech: {p.techStack.join(', ')}</div>
+              </div>
             </div>
-          </div>
-          <div>
-            <div className="text-green-400">2. [Your Project Name]</div>
-            <div className="ml-4 text-sm">
-              <div>[Project description]</div>
-              <div className="text-gray-400">Tech: [Technologies used]</div>
-            </div>
-          </div>
+          ))}
           <div className="text-gray-400 mt-2">
             💡 Tip: Open the "Projects" folder on the desktop for detailed project information!
           </div>
@@ -151,15 +148,17 @@ export const Terminal: React.FC = () => {
       <div className="space-y-2">
         <div className="text-cyan-400">💼 Work Experience</div>
         <div className="ml-4 space-y-3">
-          <div>
-            <div className="text-yellow-400">[Job Title] at [Company Name]</div>
-            <div className="text-sm text-gray-400">[Start Date] - [End Date/Present]</div>
-            <div className="ml-4 text-sm mt-1">
-              <div>• [Key responsibility or achievement]</div>
-              <div>• [Key responsibility or achievement]</div>
-              <div>• [Key responsibility or achievement]</div>
+          {experience.map((exp, i) => (
+            <div key={i}>
+              <div className="text-yellow-400">{exp.role} at {exp.company}</div>
+              <div className="text-sm text-gray-400">{exp.period}</div>
+              <div className="ml-4 text-sm mt-1">
+                {exp.description.map((desc, j) => (
+                  <div key={j}>• {desc}</div>
+                ))}
+              </div>
             </div>
-          </div>
+          ))}
         </div>
       </div>
     ),
@@ -167,11 +166,13 @@ export const Terminal: React.FC = () => {
       <div className="space-y-2">
         <div className="text-cyan-400">🎓 Education</div>
         <div className="ml-4 space-y-2">
-          <div>
-            <div className="text-yellow-400">[Degree] in [Field]</div>
-            <div className="text-sm">[University Name]</div>
-            <div className="text-sm text-gray-400">[Graduation Year]</div>
-          </div>
+          {education.map((edu, i) => (
+            <div key={i}>
+              <div className="text-yellow-400">{edu.degree}</div>
+              <div className="text-sm">{edu.institution}</div>
+              <div className="text-sm text-gray-400">{edu.year}</div>
+            </div>
+          ))}
         </div>
       </div>
     ),
@@ -179,10 +180,10 @@ export const Terminal: React.FC = () => {
       <div className="space-y-2">
         <div className="text-cyan-400">📧 Contact Information</div>
         <div className="ml-4 space-y-1">
-          <div>Email: <a href="mailto:your.email@example.com" className="text-blue-400 hover:underline">your.email@example.com</a></div>
-          <div>Phone: [Your Phone Number]</div>
-          <div>LinkedIn: <a href="https://linkedin.com/in/yourprofile" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">linkedin.com/in/yourprofile</a></div>
-          <div>GitHub: <a href="https://github.com/prashanth8983" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">github.com/prashanth8983</a></div>
+          <div>Email: <a href={`mailto:${profile.email}`} className="text-blue-400 hover:underline">{profile.email}</a></div>
+          {profile.social.map((s) => (
+            <div key={s.platform}>{s.platform}: <a href={s.url} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">{s.url}</a></div>
+          ))}
           <div className="mt-2 text-gray-400">💡 You can also use the Mail app on the desktop!</div>
         </div>
       </div>
@@ -204,10 +205,9 @@ export const Terminal: React.FC = () => {
       <div className="space-y-2">
         <div className="text-cyan-400">🌐 Social Media</div>
         <div className="ml-4 space-y-1">
-          <div>GitHub: <a href="https://github.com/prashanth8983" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">github.com/prashanth8983</a></div>
-          <div>LinkedIn: <a href="https://linkedin.com/in/yourprofile" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">linkedin.com/in/yourprofile</a></div>
-          <div>Twitter: <a href="https://twitter.com/yourhandle" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">@yourhandle</a></div>
-          <div>Portfolio: <a href="https://prashanth8983.github.io/Portfolio-desktop" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">prashanth8983.github.io/Portfolio-desktop</a></div>
+          {profile.social.map((s) => (
+            <div key={s.platform}>{s.platform}: <a href={s.url} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">{s.url}</a></div>
+          ))}
         </div>
       </div>
     ),
@@ -222,9 +222,11 @@ export const Terminal: React.FC = () => {
       </div>
     ),
     cat: () => 'Usage: cat [filename]\nAvailable files: resume.txt, skills.txt, about.txt',
+    open: () => 'Usage: open [app_name]\nTry: open browser, open calculator, open mail, etc.',
     clear: () => '__CLEAR__',
     date: () => new Date().toString(),
     whoami: () => 'prashanth-kumar',
+    matrix: () => <div className="text-green-500">Wake up, Neo... (Just kidding, matrix effect coming soon!)</div>
   };
 
   const handleCatCommand = (filename: string): string | React.ReactNode => {
@@ -247,7 +249,7 @@ export const Terminal: React.FC = () => {
 
     return (
       <pre className="text-sm">
-{` ${border}
+        {` ${border}
 < ${message} >
  ${'-'.repeat(message.length + 2)}
         \\   ^__^

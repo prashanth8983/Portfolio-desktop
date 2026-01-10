@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { IoSearch, IoDocument, IoFolder, IoCalculator, IoGlobe } from 'react-icons/io5';
-import { FaApple } from 'react-icons/fa';
+import { MagnifyingGlassIcon, FileTextIcon } from '@radix-ui/react-icons';
+import { FaCalculator } from 'react-icons/fa'; // Keep Fa for Calc if Radix doesn't have it
+import { projects } from '../data/portfolio';
+import { getIconUrl } from '../utils/icons';
 
 interface SpotlightItem {
   id: string;
@@ -23,13 +25,17 @@ export const Spotlight: React.FC<SpotlightProps> = ({ isVisible, onClose, onOpen
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  const renderAppIcon = (id: string) => (
+    <img src={getIconUrl(id)} alt={id} className="w-8 h-8 object-contain" />
+  );
+
   const allItems: SpotlightItem[] = [
     {
       id: 'browser',
       title: 'Chrome',
       subtitle: 'Application',
       type: 'app',
-      icon: <IoGlobe className="text-blue-500" />,
+      icon: renderAppIcon('chrome'),
       action: () => onOpenApp?.('chrome')
     },
     {
@@ -37,7 +43,7 @@ export const Spotlight: React.FC<SpotlightProps> = ({ isVisible, onClose, onOpen
       title: 'Safari',
       subtitle: 'Application',
       type: 'app',
-      icon: <IoGlobe className="text-blue-600" />,
+      icon: renderAppIcon('safari'),
       action: () => onOpenApp?.('safari')
     },
     {
@@ -45,7 +51,7 @@ export const Spotlight: React.FC<SpotlightProps> = ({ isVisible, onClose, onOpen
       title: 'Calculator',
       subtitle: 'Application',
       type: 'app',
-      icon: <IoCalculator className="text-orange-500" />,
+      icon: renderAppIcon('calculator'),
       action: () => onOpenApp?.('calculator')
     },
     {
@@ -53,7 +59,7 @@ export const Spotlight: React.FC<SpotlightProps> = ({ isVisible, onClose, onOpen
       title: 'TextEdit',
       subtitle: 'Application',
       type: 'app',
-      icon: <IoDocument className="text-blue-500" />,
+      icon: renderAppIcon('textedit'),
       action: () => onOpenApp?.('textedit')
     },
     {
@@ -61,7 +67,7 @@ export const Spotlight: React.FC<SpotlightProps> = ({ isVisible, onClose, onOpen
       title: 'Finder',
       subtitle: 'Application',
       type: 'app',
-      icon: <IoFolder className="text-blue-500" />,
+      icon: renderAppIcon('finder'),
       action: () => onOpenApp?.('finder-dock')
     },
     {
@@ -69,7 +75,7 @@ export const Spotlight: React.FC<SpotlightProps> = ({ isVisible, onClose, onOpen
       title: 'System Preferences',
       subtitle: 'Application',
       type: 'system',
-      icon: <FaApple className="text-gray-500" />,
+      icon: renderAppIcon('preferences'),
       action: () => onOpenApp?.('preferences')
     },
     {
@@ -77,9 +83,17 @@ export const Spotlight: React.FC<SpotlightProps> = ({ isVisible, onClose, onOpen
       title: 'Prashanth Kumar.pdf',
       subtitle: 'PDF Document',
       type: 'file',
-      icon: <IoDocument className="text-red-500" />,
+      icon: <FileTextIcon className="w-6 h-6 text-gray-500" />,
       action: () => onOpenApp?.('preview')
-    }
+    },
+    ...projects.map(p => ({
+      id: `project-${p.id}`,
+      title: p.title,
+      subtitle: 'Project',
+      type: 'file' as const,
+      icon: renderAppIcon('folder'),
+      action: () => onOpenApp?.('projects')
+    }))
   ];
 
   useEffect(() => {
@@ -110,7 +124,7 @@ export const Spotlight: React.FC<SpotlightProps> = ({ isVisible, onClose, onOpen
               title: `${mathExpression} = ${result}`,
               subtitle: 'Calculation',
               type: 'calculation',
-              icon: <IoCalculator className="text-orange-500" />
+              icon: <FaCalculator className="text-orange-500" />
             }
           ]);
           setSelectedIndex(0);
@@ -134,7 +148,7 @@ export const Spotlight: React.FC<SpotlightProps> = ({ isVisible, onClose, onOpen
         title: `Search for "${query}"`,
         subtitle: 'Search the web',
         type: 'web',
-        icon: <IoSearch className="text-blue-500" />,
+        icon: <MagnifyingGlassIcon className="text-blue-500 w-6 h-6" />,
         action: () => {
           onOpenApp?.('chrome');
           // You could pass the search query to the browser here
@@ -179,11 +193,15 @@ export const Spotlight: React.FC<SpotlightProps> = ({ isVisible, onClose, onOpen
   if (!isVisible) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center pt-32 z-50">
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-2xl w-full max-w-2xl overflow-hidden">
+
+    <div className="fixed inset-0 bg-transparent z-[9999] flex items-start justify-center pt-[20vh]" onClick={onClose}>
+      <div
+        className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-2xl rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden border border-white/20 dark:border-white/10"
+        onClick={e => e.stopPropagation()} // Prevent close on click inside
+      >
         {/* Search Input */}
-        <div className="flex items-center p-4 border-b border-gray-200 dark:border-gray-600">
-          <IoSearch size={20} className="text-gray-400 mr-3" />
+        <div className="flex items-center p-4">
+          <MagnifyingGlassIcon className="text-gray-500 dark:text-gray-400 mr-4 w-6 h-6" />
           <input
             ref={inputRef}
             type="text"
@@ -191,61 +209,57 @@ export const Spotlight: React.FC<SpotlightProps> = ({ isVisible, onClose, onOpen
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Spotlight Search"
-            className="flex-1 bg-transparent text-lg outline-none text-gray-900 dark:text-white placeholder-gray-400"
+            autoFocus
+            className="flex-1 bg-transparent text-2xl outline-none text-gray-900 dark:text-gray-100 placeholder-gray-400 font-light"
           />
         </div>
 
+        {/* Separator */}
+        {(results.length > 0 || query) && (
+          <div className="h-[1px] bg-gray-200 dark:bg-gray-700 mx-4"></div>
+        )}
+
         {/* Results */}
-        <div className="max-h-96 overflow-y-auto">
-          {results.map((item, index) => (
-            <div
-              key={item.id}
-              className={`flex items-center p-3 cursor-pointer transition-colors ${
-                index === selectedIndex
+        {(results.length > 0 || query) && (
+          <div className="max-h-[60vh] overflow-y-auto py-2">
+            {results.map((item, index) => (
+              <div
+                key={item.id}
+                className={`flex items-center px-4 py-2 mx-2 rounded-lg cursor-pointer transition-colors ${index === selectedIndex
                   ? 'bg-blue-500 text-white'
-                  : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white'
-              }`}
-              onClick={() => handleItemClick(item)}
-            >
-              <div className="w-8 h-8 flex items-center justify-center mr-3">
-                {item.icon}
-              </div>
-              <div className="flex-1">
-                <div className={`font-medium ${index === selectedIndex ? 'text-white' : ''}`}>
-                  {item.title}
+                  : 'hover:bg-gray-100/50 dark:hover:bg-gray-700/50 text-gray-900 dark:text-gray-100'
+                  }`}
+                onClick={() => handleItemClick(item)}
+                onMouseEnter={() => setSelectedIndex(index)}
+              >
+                <div className="w-8 h-8 flex items-center justify-center mr-3 text-xl">
+                  {item.icon}
                 </div>
-                {item.subtitle && (
-                  <div className={`text-sm ${
-                    index === selectedIndex ? 'text-blue-100' : 'text-gray-500 dark:text-gray-400'
-                  }`}>
-                    {item.subtitle}
+                <div className="flex-1 min-w-0">
+                  <div className={`text-base truncate ${index === selectedIndex ? 'text-white' : 'font-medium'}`}>
+                    {item.title}
                   </div>
+                  {item.subtitle && (
+                    <div className={`text-xs truncate ${index === selectedIndex ? 'text-blue-100' : 'text-gray-500 dark:text-gray-400'
+                      }`}>
+                      {item.subtitle}
+                    </div>
+                  )}
+                </div>
+                {index === selectedIndex && (
+                  <div className="text-xs opacity-70">Returns</div>
                 )}
               </div>
-              <div className={`text-xs px-2 py-1 rounded ${
-                index === selectedIndex ? 'bg-blue-400' : 'bg-gray-200 dark:bg-gray-600'
-              }`}>
-                {item.type === 'app' ? 'App' :
-                 item.type === 'file' ? 'File' :
-                 item.type === 'calculation' ? 'Calc' :
-                 item.type === 'web' ? 'Web' : 'System'}
+            ))}
+
+            {query && results.length === 0 && (
+              <div className="p-8 text-center text-gray-500 dark:text-gray-400">
+                <MagnifyingGlassIcon className="mx-auto mb-4 opacity-20 w-12 h-12" />
+                <div>No results found</div>
               </div>
-            </div>
-          ))}
-
-          {results.length === 0 && (
-            <div className="p-8 text-center text-gray-500 dark:text-gray-400">
-              <IoSearch size={32} className="mx-auto mb-2 opacity-50" />
-              <div>No results found</div>
-            </div>
-          )}
-        </div>
-
-        {/* Footer */}
-        <div className="p-2 bg-gray-50 dark:bg-gray-700 text-xs text-gray-500 dark:text-gray-400 flex justify-between">
-          <div>↑↓ to navigate • ⏎ to select • ⎋ to close</div>
-          <div>Spotlight</div>
-        </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

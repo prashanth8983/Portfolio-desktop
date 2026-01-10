@@ -1,5 +1,14 @@
 import React, { useEffect, useRef } from 'react';
-import { IoRefresh, IoInformationCircle, IoTrash, IoFolderOpen, IoCopy, IoCut, IoClipboard, IoEye } from 'react-icons/io5';
+import {
+  ReloadIcon,
+  InfoCircledIcon,
+  TrashIcon,
+  OpenInNewWindowIcon,
+  CopyIcon,
+  ScissorsIcon,
+  ClipboardIcon,
+  EyeOpenIcon
+} from '@radix-ui/react-icons';
 
 export interface ContextMenuItem {
   id: string;
@@ -77,20 +86,19 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
   return (
     <div
       ref={menuRef}
-      className="fixed z-50 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-2xl py-2 min-w-48"
+      className={`fixed z-[9999] bg-white/90 dark:bg-[#1a1a1a]/90 backdrop-blur-xl border border-white/20 dark:border-white/10 rounded-xl shadow-[0_20px_40px_rgba(0,0,0,0.3)] py-1.5 min-w-48 overflow-hidden`}
       style={{ left: position.x, top: position.y }}
     >
       {items.map((item) => (
         <div key={item.id}>
           {item.separator && (
-            <div className="h-px bg-gray-200 dark:bg-gray-600 my-1 mx-2" />
+            <div className="h-[1px] bg-gray-200/50 dark:bg-gray-700/50 my-1 mx-3" />
           )}
           <button
-            className={`w-full flex items-center px-4 py-2 text-sm text-left transition-colors ${
-              item.disabled
-                ? 'text-gray-400 dark:text-gray-500 cursor-not-allowed'
-                : 'text-gray-700 dark:text-gray-200 hover:bg-blue-500 hover:text-white'
-            }`}
+            className={`w-full flex items-center px-4 py-1.5 text-sm text-left transition-colors font-medium ${item.disabled
+              ? 'text-gray-400 dark:text-gray-600 cursor-not-allowed'
+              : 'text-gray-800 dark:text-gray-200 hover:bg-blue-500 hover:text-white'
+              }`}
             onClick={() => {
               if (!item.disabled) {
                 item.action();
@@ -117,19 +125,19 @@ export const getDesktopContextMenu = (onRefresh: () => void, onAbout: () => void
   {
     id: 'refresh',
     label: 'Refresh Desktop',
-    icon: <IoRefresh size={16} />,
+    icon: <ReloadIcon />,
     action: onRefresh
   },
   {
     id: 'separator1',
     label: '',
-    action: () => {},
+    action: () => { },
     separator: true
   },
   {
     id: 'about',
     label: 'About This Mac',
-    icon: <IoInformationCircle size={16} />,
+    icon: <InfoCircledIcon />,
     action: onAbout
   }
 ];
@@ -140,97 +148,97 @@ export const getFileContextMenu = (
   onDelete: () => void,
   onGetInfo: () => void
 ): ContextMenuItem[] => [
-  {
-    id: 'open',
-    label: 'Open',
-    icon: <IoFolderOpen size={16} />,
-    action: onOpen
-  },
-  {
-    id: 'preview',
-    label: 'Quick Look',
-    icon: <IoEye size={16} />,
-    action: onOpen
-  },
-  {
-    id: 'separator1',
-    label: '',
-    action: () => {},
-    separator: true
-  },
-  {
-    id: 'copy',
-    label: 'Copy',
-    icon: <IoCopy size={16} />,
-    action: () => {
-      navigator.clipboard.writeText(fileName);
+    {
+      id: 'open',
+      label: 'Open',
+      icon: <OpenInNewWindowIcon />,
+      action: onOpen
+    },
+    {
+      id: 'preview',
+      label: 'Quick Look',
+      icon: <EyeOpenIcon />,
+      action: onOpen
+    },
+    {
+      id: 'separator1',
+      label: '',
+      action: () => { },
+      separator: true
+    },
+    {
+      id: 'copy',
+      label: 'Copy',
+      icon: <CopyIcon />,
+      action: () => {
+        navigator.clipboard.writeText(fileName);
+      }
+    },
+    {
+      id: 'cut',
+      label: 'Cut',
+      icon: <ScissorsIcon />,
+      action: () => {
+        navigator.clipboard.writeText(fileName);
+      }
+    },
+    {
+      id: 'paste',
+      label: 'Paste',
+      icon: <ClipboardIcon />,
+      action: () => { },
+      disabled: true
+    },
+    {
+      id: 'separator2',
+      label: '',
+      action: () => { },
+      separator: true
+    },
+    {
+      id: 'delete',
+      label: 'Move to Trash',
+      icon: <TrashIcon />,
+      action: onDelete
+    },
+    {
+      id: 'separator3',
+      label: '',
+      action: () => { },
+      separator: true
+    },
+    {
+      id: 'info',
+      label: 'Get Info',
+      icon: <InfoCircledIcon />,
+      action: onGetInfo
     }
-  },
-  {
-    id: 'cut',
-    label: 'Cut',
-    icon: <IoCut size={16} />,
-    action: () => {
-      navigator.clipboard.writeText(fileName);
-    }
-  },
-  {
-    id: 'paste',
-    label: 'Paste',
-    icon: <IoClipboard size={16} />,
-    action: () => {},
-    disabled: true
-  },
-  {
-    id: 'separator2',
-    label: '',
-    action: () => {},
-    separator: true
-  },
-  {
-    id: 'delete',
-    label: 'Move to Trash',
-    icon: <IoTrash size={16} />,
-    action: onDelete
-  },
-  {
-    id: 'separator3',
-    label: '',
-    action: () => {},
-    separator: true
-  },
-  {
-    id: 'info',
-    label: 'Get Info',
-    icon: <IoInformationCircle size={16} />,
-    action: onGetInfo
-  }
-];
+  ];
 
 export const getWindowContextMenu = (
   onMinimize: () => void,
   onMaximize: () => void,
   onClose: () => void
 ): ContextMenuItem[] => [
-  {
-    id: 'minimize',
-    label: 'Minimize',
-    action: onMinimize
-  },
-  {
-    id: 'maximize',
-    label: 'Maximize',
-    action: onMaximize
-  },
-  {
-    id: 'separator1',
-    label: '',
-    action: () => {},
-    separator: true
-  },
-  {
-    id: 'close',
-    label: 'Close',
-    action: onClose
-  }
-];
+    {
+      id: 'minimize',
+      label: 'Minimize',
+      action: onMinimize
+    },
+    {
+      id: 'maximize',
+      label: 'Maximize',
+      action: onMaximize
+    },
+    {
+      id: 'separator1',
+      label: '',
+      action: () => { },
+      separator: true
+    },
+    {
+      id: 'close',
+      label: 'Close',
+      action: onClose
+    }
+  ];

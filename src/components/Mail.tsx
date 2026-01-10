@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { FaPaperPlane, FaCheckCircle, FaEnvelope, FaUser, FaEdit } from 'react-icons/fa';
+import { profile } from '../data/portfolio';
 
 interface EmailMessage {
   id: string;
@@ -13,7 +14,7 @@ interface EmailMessage {
 const sampleEmails: EmailMessage[] = [
   {
     id: '1',
-    from: 'Prashanth Kumar',
+    from: profile.name,
     subject: 'Welcome to my Portfolio!',
     preview: 'Thanks for visiting my interactive portfolio. Feel free to explore and reach out if you\'d like to connect...',
     date: 'Today',
@@ -81,9 +82,8 @@ export const Mail: React.FC = () => {
             setView('inbox');
             setSelectedEmail(null);
           }}
-          className={`py-1.5 px-3 rounded-md cursor-pointer transition-colors text-sm ${
-            view === 'inbox' ? 'bg-gray-200 text-gray-900 font-medium' : 'text-gray-700 hover:bg-gray-100'
-          }`}
+          className={`py-1.5 px-3 rounded-md cursor-pointer transition-colors text-sm ${view === 'inbox' ? 'bg-gray-200 text-gray-900 font-medium' : 'text-gray-700 hover:bg-gray-100'
+            }`}
         >
           <div className="flex items-center gap-2.5">
             <FaEnvelope size={13} />
@@ -94,9 +94,8 @@ export const Mail: React.FC = () => {
 
         <div
           onClick={() => setView('sent')}
-          className={`py-1.5 px-3 rounded-md cursor-pointer transition-colors text-sm ${
-            view === 'sent' ? 'bg-gray-200 text-gray-900 font-medium' : 'text-gray-700 hover:bg-gray-100'
-          }`}
+          className={`py-1.5 px-3 rounded-md cursor-pointer transition-colors text-sm ${view === 'sent' ? 'bg-gray-200 text-gray-900 font-medium' : 'text-gray-700 hover:bg-gray-100'
+            }`}
         >
           <div className="flex items-center gap-2.5">
             <FaPaperPlane size={13} />
@@ -115,9 +114,8 @@ export const Mail: React.FC = () => {
           <div
             key={email.id}
             onClick={() => setSelectedEmail(email)}
-            className={`p-3 border-b border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors ${
-              selectedEmail?.id === email.id ? 'bg-blue-50 border-l-2 border-l-blue-600' : ''
-            } ${!email.read && selectedEmail?.id !== email.id ? 'bg-blue-50/30' : ''}`}
+            className={`p-3 border-b border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors ${selectedEmail?.id === email.id ? 'bg-blue-50 border-l-2 border-l-blue-600' : ''
+              } ${!email.read && selectedEmail?.id !== email.id ? 'bg-blue-50/30' : ''}`}
           >
             <div className="flex justify-between items-start mb-1">
               <div className={`font-semibold ${!email.read ? 'text-blue-700' : 'text-gray-800'}`}>
@@ -185,7 +183,7 @@ export const Mail: React.FC = () => {
               <div className="flex items-center gap-2 text-gray-600">
                 <FaEnvelope />
                 <span className="font-medium">To:</span>
-                <span className="text-blue-600">prashanth@portfolio.dev</span>
+                <span className="text-blue-600">{profile.email}</span>
               </div>
             </div>
 
@@ -255,11 +253,10 @@ export const Mail: React.FC = () => {
               <button
                 type="submit"
                 disabled={isSending}
-                className={`flex-1 py-3 px-6 rounded-lg font-semibold text-white transition-all flex items-center justify-center gap-2 ${
-                  isSending
+                className={`flex-1 py-3 px-6 rounded-lg font-semibold text-white transition-all flex items-center justify-center gap-2 ${isSending
                     ? 'bg-gray-400 cursor-not-allowed'
                     : 'bg-blue-600 hover:bg-blue-700 active:scale-95'
-                }`}
+                  }`}
               >
                 {isSending ? (
                   <>

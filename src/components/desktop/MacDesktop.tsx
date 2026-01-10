@@ -14,6 +14,8 @@ import { Gallery } from '../Gallery';
 import { Mail } from '../Mail';
 import { Music } from '../Music';
 import { ActivityMonitor } from '../ActivityMonitor';
+import { Calendar } from '../Calendar';
+import { Preview } from '../Preview';
 import { Window } from './Window'; // Import new component
 import { Finder } from '../Finder';
 import ProfileCard from '../ProfileCard';
@@ -27,10 +29,12 @@ import { MagnifyingGlassIcon, SunIcon, MoonIcon } from '@radix-ui/react-icons'; 
 interface MacDesktopProps {
   apps: DesktopIconType[];
   dockItems: DockItem[];
+  onLock: () => void;
 }
 
-export const MacDesktop: React.FC<MacDesktopProps> = ({ apps, dockItems }) => {
+export const MacDesktop: React.FC<MacDesktopProps> = ({ apps, dockItems, onLock }) => {
   const { toggleTheme, isDark } = useTheme();
+
   const [icons, setIcons] = useState<DesktopIconType[]>(apps);
   const [windows, setWindows] = useState<WindowType[]>([]);
   const [nextZIndex, setNextZIndex] = useState<number>(1);
@@ -59,6 +63,14 @@ export const MacDesktop: React.FC<MacDesktopProps> = ({ apps, dockItems }) => {
     position: { x: 0, y: 0 },
     items: []
   });
+
+  const [activeMenu, setActiveMenu] = useState<string | null>(null);
+
+  useEffect(() => {
+    const handleClickOutside = () => setActiveMenu(null);
+    window.addEventListener('click', handleClickOutside);
+    return () => window.removeEventListener('click', handleClickOutside);
+  }, []);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -131,12 +143,18 @@ export const MacDesktop: React.FC<MacDesktopProps> = ({ apps, dockItems }) => {
     if (draggingIcon) setDraggingIcon(null);
   };
 
-  const openWindow = (type: 'browser' | 'finder' | 'pdf' | 'terminal' | 'projects' | 'photos' | 'mail' | 'music' | 'activity-monitor' | 'profile' | 'other', title: string, pdfPath?: string, dockId?: string) => {
+  const openWindow = (type: 'browser' | 'finder' | 'pdf' | 'preview' | 'terminal' | 'projects' | 'photos' | 'mail' | 'music' | 'activity-monitor' | 'profile' | 'textedit' | 'other', title: string, pdfPath?: string, dockId?: string) => {
     // Calculate window position with offset for multiple windows
     const existingWindows = windows.filter(w => !w.isMinimized);
     const offset = existingWindows.length * 30;
     const maxX = Math.max(0, window.innerWidth - 800 - 50);
     const maxY = Math.max(0, window.innerHeight - 600 - 150);
+
+    // Calculator has fixed dimensions
+    const isCalculator = title === 'Calculator';
+    const windowSize = isCalculator
+      ? { width: 232, height: 350 }
+      : { width: 800, height: 600 };
 
     const newWindow: WindowType = {
       id: `window-${Date.now()}`,
@@ -146,37 +164,39 @@ export const MacDesktop: React.FC<MacDesktopProps> = ({ apps, dockItems }) => {
         x: Math.min(100 + offset, maxX),
         y: Math.min(100 + offset, maxY)
       },
-      size: { width: 800, height: 600 },
+      size: windowSize,
       isMinimized: false,
       isFullscreen: false,
       zIndex: nextZIndex,
       pdfPath,
       dockId,
       content: type === 'pdf' && pdfPath ? <PdfViewer pdfPath={pdfPath} /> :
-        type === 'browser' ? <Browser /> :
-          type === 'finder' ? <Finder initialDirectory={
-            dockId === 'projects-folder' ? 'projects' :
-              dockId === 'documents' ? 'documents' :
-                dockId === 'mac-hd' ? 'mac-hd' :
-                  'recents'
-          } /> :
-            type === 'terminal' ? <Terminal /> :
-              type === 'projects' ? <ProjectViewer /> :
-                type === 'photos' ? <Gallery /> :
-                  type === 'mail' ? <Mail /> :
-                    type === 'music' ? <Music /> :
-                      type === 'activity-monitor' ? <ActivityMonitor /> :
-                        title === 'Calculator' ? <Calculator /> :
-                          title === 'TextEdit' ? <TextEditor /> :
-                            title === 'About This Mac' ? <AboutThisMac /> :
-                              <div>Content for {title}</div>,
+        type === 'preview' && pdfPath ? <Preview pdfPath={pdfPath} fileName={title} /> :
+          type === 'browser' ? <Browser /> :
+            type === 'finder' ? <Finder initialDirectory={
+              dockId === 'projects-folder' ? 'projects' :
+                dockId === 'documents' ? 'documents' :
+                  dockId === 'mac-hd' ? 'mac-hd' :
+                    'recents'
+            } /> :
+              type === 'terminal' ? <Terminal /> :
+                type === 'projects' ? <ProjectViewer /> :
+                  type === 'photos' ? <Gallery /> :
+                    type === 'mail' ? <Mail /> :
+                      type === 'music' ? <Music /> :
+                        type === 'activity-monitor' ? <ActivityMonitor /> :
+                          title === 'Calculator' ? <Calculator /> :
+                            type === 'textedit' ? <TextEditor /> :
+                              title === 'Calendar' ? <Calendar /> :
+                                title === 'About This Mac' ? <AboutThisMac /> :
+                                  <div>Content for {title}</div>,
     };
     setWindows([...windows, newWindow]);
     setNextZIndex(nextZIndex + 1);
   };
 
   const handleIconDoubleClick = (icon: DesktopIconType) => {
-    if (icon.type === 'pdf' && icon.content) openWindow('pdf', icon.name, icon.content);
+    if (icon.type === 'pdf' && icon.content) openWindow('preview', icon.name, icon.content);
     else if (icon.type === 'app' && icon.id === 'finder') openWindow('finder', 'Finder', undefined, 'finder-dock');
     else if (icon.type === 'app' && icon.id === 'profile') setIsProfileOpen(true);
     else if (icon.type === 'folder' && icon.id === 'projects') openWindow('finder', 'Projects', undefined, 'projects-folder');
@@ -197,17 +217,17 @@ export const MacDesktop: React.FC<MacDesktopProps> = ({ apps, dockItems }) => {
   };
 
   const openAppById = (id: string) => {
-    if (id === 'chrome') openWindow('browser', 'Chrome', undefined, 'chrome');
-    else if (id === 'safari') openWindow('browser', 'Safari', undefined, 'safari');
+    if (id === 'safari') openWindow('browser', 'Safari', undefined, 'safari');
     else if (id === 'finder-dock') openWindow('finder', 'Finder', undefined, 'finder-dock');
-    else if (id === 'preview') openWindow('pdf', 'resume.pdf', '/Resume.pdf', 'preview');
+    else if (id === 'preview') openWindow('preview', 'Prashanth Kumar.pdf', '/Resume.pdf', 'preview');
     else if (id === 'calculator') openWindow('other', 'Calculator', undefined, 'calculator');
-    else if (id === 'textedit') openWindow('other', 'TextEdit', undefined, 'textedit');
+    else if (id === 'textedit') openWindow('textedit', 'TextEdit', undefined, 'textedit');
     else if (id === 'terminal') openWindow('terminal', 'Terminal', undefined, 'terminal');
     else if (id === 'mail') openWindow('mail', 'Mail', undefined, 'mail');
     else if (id === 'music') openWindow('music', 'Music', undefined, 'music');
     else if (id === 'photos') openWindow('photos', 'Photos', undefined, 'photos');
     else if (id === 'activity-monitor') openWindow('activity-monitor', 'Activity Monitor', undefined, 'activity-monitor');
+    else if (id === 'calendar') openWindow('other', 'Calendar', undefined, 'calendar');
     else if (id === 'projects-folder') openWindow('projects', 'Projects', undefined, 'projects-folder');
     else openWindow('other', dockItems.find((item) => item.id === id)?.name || 'Window', undefined, id);
   };
@@ -441,6 +461,13 @@ export const MacDesktop: React.FC<MacDesktopProps> = ({ apps, dockItems }) => {
     setContextMenu(prev => ({ ...prev, isVisible: false }));
   };
 
+  // Determine active application
+  const activeWindow = windows.filter(w => !w.isMinimized).sort((a, b) => b.zIndex - a.zIndex)[0];
+  const activeAppName = isProfileOpen ? 'Profile' : (activeWindow ? (activeWindow.title === 'Prashanth Kumar.pdf' ? 'Preview' : activeWindow.title) : 'Finder');
+
+
+
+
   return (
     <div
       className={`w-screen h-screen bg-cover bg-center relative overflow-hidden font-sans transition-colors duration-300 select-none ${isDark ? 'bg-gray-900' : 'bg-blue-100'
@@ -469,21 +496,138 @@ export const MacDesktop: React.FC<MacDesktopProps> = ({ apps, dockItems }) => {
         className="flex justify-between items-center h-8 px-4 text-sm fixed top-0 left-0 right-0 z-50 text-white"
         style={{ textShadow: '0 1px 3px rgba(0,0,0,0.5), 0 0 1px rgba(0,0,0,0.3)' }}
       >
-        <div className="flex items-center space-x-5 font-medium">
+        <div className="flex items-center space-x-5 font-medium select-none">
           <div
-            className="cursor-pointer hover:bg-white/10 p-1 rounded-sm transition-colors"
-            onClick={() => openWindow('other', 'About This Mac', undefined, 'about-mac')}
-            title="About This Mac"
+            className={`cursor-pointer hover:bg-white/10 p-1 rounded-sm transition-colors relative ${activeMenu === 'apple' ? 'bg-white/10' : ''}`}
+            onClick={(e) => { e.stopPropagation(); setActiveMenu(activeMenu === 'apple' ? null : 'apple'); }}
+            title="Apple Menu"
           >
             <FaApple size={18} />
+            {activeMenu === 'apple' && (
+              <div className={`absolute top-8 left-0 w-56 backdrop-blur-xl border rounded-lg shadow-2xl py-1.5 z-[60] flex flex-col ${isDark ? 'bg-[#1e1e1e]/90 border-white/20 text-white' : 'bg-white/90 border-black/20 text-black'}`} style={{ textShadow: 'none' }}>
+                <div className={`px-3 py-1 rounded mx-1 cursor-default text-sm ${isDark ? 'hover:bg-blue-600' : 'hover:bg-blue-500 hover:text-white'}`} onClick={() => openWindow('other', 'About This Mac', undefined, 'about-mac')}>About This Mac</div>
+                <div className={`h-[1px] my-1 mx-3 ${isDark ? 'bg-white/10' : 'bg-black/10'}`} />
+                <div className={`px-3 py-1 rounded mx-1 cursor-default text-sm ${isDark ? 'hover:bg-blue-600' : 'hover:bg-blue-500 hover:text-white'}`}>System Settings...</div>
+                <div className={`px-3 py-1 rounded mx-1 cursor-default text-sm ${isDark ? 'hover:bg-blue-600' : 'hover:bg-blue-500 hover:text-white'}`}>App Store...</div>
+                <div className={`h-[1px] my-1 mx-3 ${isDark ? 'bg-white/10' : 'bg-black/10'}`} />
+                <div className={`px-3 py-1 rounded mx-1 cursor-default text-sm ${isDark ? 'hover:bg-blue-600' : 'hover:bg-blue-500 hover:text-white'}`}>Sleep</div>
+                <div className={`px-3 py-1 rounded mx-1 cursor-default text-sm ${isDark ? 'hover:bg-blue-600' : 'hover:bg-blue-500 hover:text-white'}`} onClick={() => window.location.reload()}>Restart...</div>
+                <div className={`px-3 py-1 rounded mx-1 cursor-default text-sm ${isDark ? 'hover:bg-blue-600' : 'hover:bg-blue-500 hover:text-white'}`}>Shut Down...</div>
+                <div className={`h-[1px] my-1 mx-3 ${isDark ? 'bg-white/10' : 'bg-black/10'}`} />
+                <div className={`px-3 py-1 rounded mx-1 cursor-default text-sm ${isDark ? 'hover:bg-blue-600' : 'hover:bg-blue-500 hover:text-white'}`} onClick={() => { onLock(); setActiveMenu(null); }}>Lock Screen</div>
+              </div>
+            )}
           </div>
-          <div className="font-bold cursor-default">Finder</div>
-          <div className="cursor-default hover:bg-white/10 px-2 py-0.5 rounded">File</div>
-          <div className="cursor-default hover:bg-white/10 px-2 py-0.5 rounded">Edit</div>
-          <div className="cursor-default hover:bg-white/10 px-2 py-0.5 rounded">View</div>
-          <div className="cursor-default hover:bg-white/10 px-2 py-0.5 rounded">Go</div>
-          <div className="cursor-default hover:bg-white/10 px-2 py-0.5 rounded">Window</div>
-          <div className="cursor-default hover:bg-white/10 px-2 py-0.5 rounded">Help</div>
+
+          <div className="font-bold cursor-default">{activeAppName}</div>
+
+          {[
+            {
+              id: 'file', label: 'File', items: [
+                { label: 'New Window', action: () => openWindow('finder', 'Finder', undefined, 'finder-dock') },
+                { label: 'New Folder', disabled: true },
+                { separator: true },
+                {
+                  label: 'Close Window', action: () => {
+                    if (activeWindow) closeWindow(activeWindow.id, { stopPropagation: () => { } } as React.MouseEvent);
+                  }
+                },
+              ]
+            },
+            {
+              id: 'edit', label: 'Edit', items: [
+                { label: 'Undo', disabled: true },
+                { label: 'Redo', disabled: true },
+                { separator: true },
+                { label: 'Cut', disabled: true },
+                { label: 'Copy', disabled: true },
+                { label: 'Paste', disabled: true },
+                { label: 'Select All', disabled: true },
+              ]
+            },
+            {
+              id: 'view', label: 'View', items: [
+                { label: 'as Icons', disabled: true },
+                { label: 'as List', disabled: true },
+                { separator: true },
+                {
+                  label: 'Enter Full Screen', action: () => {
+                    if (activeWindow) toggleFullscreen(activeWindow.id, { stopPropagation: () => { } } as React.MouseEvent);
+                  }
+                },
+              ]
+            },
+            {
+              id: 'go', label: 'Go', items: [
+                { label: 'Back', disabled: true },
+                { label: 'Forward', disabled: true },
+                { separator: true },
+                { label: 'Home', action: () => openWindow('finder', 'Home', undefined, 'finder-dock') },
+                { label: 'Desktop', action: () => { } },
+                { label: 'Downloads', action: () => openWindow('finder', 'Downloads', undefined, 'downloads') },
+                { label: 'Applications', action: () => openWindow('finder', 'Applications', undefined, 'applications') },
+              ]
+            },
+            {
+              id: 'window', label: 'Window', items: [
+                {
+                  label: 'Minimize', action: () => {
+                    if (activeWindow) minimizeWindow(activeWindow.id, { stopPropagation: () => { } } as React.MouseEvent);
+                  }
+                },
+                {
+                  label: 'Zoom', action: () => {
+                    if (activeWindow) toggleFullscreen(activeWindow.id, { stopPropagation: () => { } } as React.MouseEvent);
+                  }
+                },
+                { separator: true },
+                {
+                  label: 'Bring All to Front', action: () => {
+                    // simple mock
+                    const highestZ = windows.reduce((max, w) => Math.max(max, w.zIndex), 0);
+                    setNextZIndex(highestZ + 1);
+                  }
+                },
+              ]
+            },
+            {
+              id: 'help', label: 'Help', items: [
+                { label: 'Search', action: () => setIsSpotlightVisible(true) },
+                { label: 'macOS Help', disabled: true },
+              ]
+            },
+          ].map((menu) => (
+            <div
+              key={menu.id}
+              className={`cursor-default hover:bg-white/10 px-2 py-0.5 rounded relative ${activeMenu === menu.id ? 'bg-white/10' : ''}`}
+              onClick={(e) => { e.stopPropagation(); setActiveMenu(activeMenu === menu.id ? null : menu.id); }}
+            >
+              {menu.label}
+              {activeMenu === menu.id && (
+                <div className={`absolute top-8 left-0 w-48 backdrop-blur-xl border rounded-lg shadow-2xl py-1.5 z-[60] flex flex-col ${isDark ? 'bg-[#1e1e1e]/90 border-white/20 text-white' : 'bg-white/90 border-black/20 text-black'}`} style={{ textShadow: 'none' }}>
+                  {menu.items.map((item, idx) => (
+                    item.separator ? (
+                      <div key={idx} className={`h-[1px] my-1 mx-3 ${isDark ? 'bg-white/10' : 'bg-black/10'}`} />
+                    ) : (
+                      <div
+                        key={idx}
+                        className={`px-3 py-1 rounded mx-1 text-sm ${item.disabled ? (isDark ? 'text-white/40' : 'text-black/40') + ' cursor-default' : (isDark ? 'hover:bg-blue-600 text-white' : 'hover:bg-blue-500 hover:text-white text-black') + ' cursor-pointer'}`}
+                        onClick={(e) => {
+                          if (!item.disabled && item.action) {
+                            e.stopPropagation();
+                            item.action();
+                            setActiveMenu(null);
+                          }
+                        }}
+                      >
+                        {item.label}
+                      </div>
+                    )
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
         </div>
 
         {/* Right Menu Items */}

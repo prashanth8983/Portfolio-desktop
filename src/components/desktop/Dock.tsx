@@ -40,7 +40,7 @@ export const Dock: React.FC<DockProps> = ({
   }, []);
 
   return (
-    <div className="fixed bottom-3 left-0 right-0 flex justify-center items-end z-[100] h-[70px] pointer-events-none">
+    <div className="fixed bottom-3 left-0 right-0 flex justify-center items-end z-[90] h-[70px] pointer-events-none">
       <div
         className="
           bg-white/20 backdrop-blur-2xl rounded-2xl pb-1.5 pt-1.5 px-2.5
@@ -73,8 +73,8 @@ export const Dock: React.FC<DockProps> = ({
 
             {/* Active Indicator */}
             <div className={`mt-1 w-1 h-1 rounded-full transition-opacity duration-300 ${windows.some((w) => ((item.id === 'finder-dock' && w.type === 'finder') || w.title === item.name) && !w.isMinimized)
-                ? 'bg-black/60 dark:bg-white/90 opacity-100' // Dark dot in light mode, white in dark
-                : 'bg-transparent opacity-0'
+              ? 'bg-black/60 dark:bg-white/90 opacity-100' // Dark dot in light mode, white in dark
+              : 'bg-transparent opacity-0'
               }`}></div>
           </div>
         ))}

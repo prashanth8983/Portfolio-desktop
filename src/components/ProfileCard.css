@@ -1,0 +1,452 @@
+/* NYU ID Card Styles */
+:root {
+    --pointer-x: 50%;
+    --pointer-y: 50%;
+    --pointer-from-center: 0;
+    --pointer-from-top: 0.5;
+    --pointer-from-left: 0.5;
+    --card-opacity: 0;
+    --rotate-x: 0deg;
+    --rotate-y: 0deg;
+    --background-x: 50%;
+    --background-y: 50%;
+    --grain: none;
+    --seal: none;
+    --nyu-purple: #57068c;
+    --nyu-purple-dark: #3d0066;
+    --nyu-purple-light: #7b2d9e;
+    --card-radius: 16px;
+}
+
+/* Wrapper with perspective for 3D effect */
+.nyu-card-wrapper {
+    perspective: 600px;
+    transform: translate3d(0, 0, 0.1px);
+    position: relative;
+    touch-action: none;
+}
+
+/* Behind glow effect */
+.nyu-behind {
+    position: absolute;
+    inset: -20px;
+    z-index: 0;
+    pointer-events: none;
+    background: radial-gradient(circle at var(--pointer-x) var(--pointer-y),
+            rgba(87, 6, 140, 0.6) 0%,
+            transparent 50%);
+    filter: blur(40px) saturate(1.2);
+    opacity: calc(0.7 * var(--card-opacity));
+    transition: opacity 300ms ease;
+}
+
+.nyu-card-wrapper:hover,
+.nyu-card-wrapper.active {
+    --card-opacity: 1;
+}
+
+/* Card shell for event handling */
+.nyu-card-shell {
+    position: relative;
+    z-index: 1;
+}
+
+/* Main card */
+.nyu-card {
+    width: 320px;
+    height: 500px;
+    border-radius: var(--card-radius);
+    position: relative;
+    overflow: hidden;
+    background: linear-gradient(180deg,
+            var(--nyu-purple) 0%,
+            var(--nyu-purple-dark) 50%,
+            var(--nyu-purple) 100%);
+    box-shadow:
+        rgba(0, 0, 0, 0.5) calc((var(--pointer-from-left) * 15px) - 7px) calc((var(--pointer-from-top) * 25px) - 12px) 30px -8px,
+        0 0 0 1px rgba(255, 255, 255, 0.1);
+    transition: transform 0.8s ease;
+    transform: translateZ(0) rotateX(0deg) rotateY(0deg);
+    backface-visibility: hidden;
+}
+
+.nyu-card:hover,
+.nyu-card.active {
+    transition: none;
+    transform: translateZ(20px) rotateX(var(--rotate-y)) rotateY(var(--rotate-x));
+}
+
+.nyu-card-shell.entering .nyu-card {
+    transition: transform 180ms ease-out;
+}
+
+/* Advanced Holographic shine effect */
+.nyu-shine {
+    position: absolute;
+    inset: 0;
+    z-index: 10;
+    pointer-events: none;
+    border-radius: var(--card-radius);
+    overflow: hidden;
+    transform: translate3d(0, 0, 1px);
+
+    /* Smooth radial light that follows cursor - no harsh edges */
+    background: radial-gradient(
+        ellipse 80% 80% at var(--pointer-x) var(--pointer-y),
+        rgba(255, 255, 255, 0.5) 0%,
+        rgba(255, 255, 255, 0.2) 30%,
+        transparent 70%
+    );
+
+    mix-blend-mode: overlay;
+    opacity: 0.4;
+    transition: opacity 0.3s ease;
+}
+
+.nyu-card:hover .nyu-shine,
+.nyu-card.active .nyu-shine {
+    opacity: 1;
+}
+
+/* Shine ::before - Holographic pattern with seal mask */
+.nyu-shine::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+
+    /* Holographic rainbow gradient - smooth radial instead of linear */
+    background:
+        radial-gradient(
+            ellipse 120% 100% at var(--pointer-x) var(--pointer-y),
+            rgba(255, 255, 255, 0.8) 0%,
+            rgba(255, 255, 255, 0.3) 30%,
+            transparent 60%
+        ),
+        linear-gradient(
+            calc(var(--pointer-from-left) * 180deg),
+            rgba(255, 0, 255, 0.6) 0%,
+            rgba(0, 255, 255, 0.6) 50%,
+            rgba(255, 255, 0, 0.6) 100%
+        );
+
+    /* Mask with seal pattern - larger size with spacing */
+    -webkit-mask-image: var(--seal-url);
+    mask-image: var(--seal-url);
+    -webkit-mask-size: 120px 120px;
+    mask-size: 120px 120px;
+    -webkit-mask-repeat: space;
+    mask-repeat: space;
+    -webkit-mask-position: center;
+    mask-position: center;
+
+    mix-blend-mode: color-dodge;
+    opacity: 0.4;
+    transition: opacity 0.4s ease;
+}
+
+.nyu-card:hover .nyu-shine::before,
+.nyu-card.active .nyu-shine::before {
+    opacity: 1;
+}
+
+/* Shine ::after - Soft ambient glow */
+.nyu-shine::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+
+    /* Soft wide glow at cursor position */
+    background: radial-gradient(
+        ellipse 100% 80% at var(--pointer-x) var(--pointer-y),
+        rgba(255, 255, 255, 0.6) 0%,
+        rgba(255, 255, 255, 0.25) 25%,
+        transparent 55%
+    );
+
+    mix-blend-mode: overlay;
+    opacity: 0.3;
+    transition: opacity 0.3s ease;
+}
+
+.nyu-card:hover .nyu-shine::after,
+.nyu-card.active .nyu-shine::after {
+    opacity: 1;
+}
+
+/* Glare effect - intense specular highlight */
+.nyu-glare {
+    position: absolute;
+    inset: 0;
+    z-index: 11;
+    pointer-events: none;
+    border-radius: var(--card-radius);
+    overflow: hidden;
+    transform: translate3d(0, 0, 1.1px);
+
+    /* Bright specular highlight at cursor */
+    background: radial-gradient(
+        ellipse 60% 50% at var(--pointer-x) var(--pointer-y),
+        rgba(255, 255, 255, 0.7) 0%,
+        rgba(255, 255, 255, 0.35) 30%,
+        rgba(255, 255, 255, 0.1) 50%,
+        transparent 70%
+    );
+
+    mix-blend-mode: overlay;
+    opacity: 0.25;
+    transition: opacity 0.15s ease;
+}
+
+.nyu-card:hover .nyu-glare,
+.nyu-card.active .nyu-glare {
+    opacity: 1;
+}
+
+/* Additional holographic texture layer on the card itself */
+.nyu-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 9;
+    pointer-events: none;
+    border-radius: var(--card-radius);
+
+    /* Fine grid pattern for holographic texture */
+    background-image:
+        repeating-linear-gradient(0deg,
+            transparent 0px,
+            transparent 2px,
+            rgba(255, 255, 255, 0.015) 2px,
+            rgba(255, 255, 255, 0.015) 3px),
+        repeating-linear-gradient(90deg,
+            transparent 0px,
+            transparent 2px,
+            rgba(255, 255, 255, 0.015) 2px,
+            rgba(255, 255, 255, 0.015) 3px);
+
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.nyu-card:hover::before,
+.nyu-card.active::before {
+    opacity: 1;
+}
+
+/* Card content container */
+.nyu-card-content {
+    position: relative;
+    z-index: 1;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+}
+
+/* NYU Header with logo in white box and NYU text */
+.nyu-header {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin-bottom: 15px;
+}
+
+.nyu-logo-box {
+    background: white;
+    padding: 8px 10px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.nyu-logo-img {
+    height: 28px;
+    width: auto;
+    object-fit: contain;
+}
+
+.nyu-logo-text {
+    font-size: 32px;
+    font-weight: 700;
+    color: white;
+    letter-spacing: 1px;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+/* Photo section */
+.nyu-photo-section {
+    position: relative;
+    width: 100%;
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 180px;
+}
+
+/* Main photo frame */
+.nyu-photo-frame {
+    position: relative;
+    z-index: 1;
+    width: 140px;
+    height: 175px;
+    background: white;
+    padding: 4px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.nyu-photo {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* Expiration date */
+.nyu-expiration {
+    font-size: 22px;
+    font-weight: 500;
+    color: #d4a84b;
+    margin: 15px 0 10px;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+/* Name section */
+.nyu-name-section {
+    text-align: center;
+    margin-bottom: 15px;
+}
+
+.nyu-lastname {
+    font-size: 32px;
+    font-weight: 600;
+    color: white;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    line-height: 1.1;
+}
+
+.nyu-firstname {
+    font-size: 24px;
+    font-weight: 400;
+    color: rgba(255, 255, 255, 0.9);
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+/* Footer with small photo and role */
+.nyu-footer {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    margin-top: auto;
+}
+
+.nyu-small-photo {
+    width: 50px;
+    height: 60px;
+    background: white;
+    padding: 2px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+}
+
+.nyu-small-photo img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.nyu-role {
+    font-size: 20px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.8);
+    letter-spacing: 3px;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+/* Holographic seal pattern overlay - hidden, effect moved to .nyu-shine::before */
+.nyu-seal-holographic {
+    display: none;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .nyu-card {
+        width: 280px;
+        height: 440px;
+    }
+
+    .nyu-photo-frame {
+        width: 120px;
+        height: 150px;
+    }
+
+    .nyu-shine::before {
+        -webkit-mask-size: 100px 100px;
+        mask-size: 100px 100px;
+    }
+
+    .nyu-lastname {
+        font-size: 26px;
+    }
+
+    .nyu-firstname {
+        font-size: 20px;
+    }
+
+    .nyu-expiration {
+        font-size: 18px;
+    }
+
+    .nyu-small-photo {
+        width: 40px;
+        height: 50px;
+    }
+
+    .nyu-role {
+        font-size: 16px;
+    }
+}
+
+@media (max-width: 480px) {
+    .nyu-card {
+        width: 260px;
+        height: 400px;
+    }
+
+    .nyu-photo-frame {
+        width: 100px;
+        height: 125px;
+    }
+
+    .nyu-shine::before {
+        -webkit-mask-size: 80px 80px;
+        mask-size: 80px 80px;
+    }
+
+    .nyu-lastname {
+        font-size: 22px;
+    }
+
+    .nyu-firstname {
+        font-size: 18px;
+    }
+
+    .nyu-expiration {
+        font-size: 16px;
+    }
+
+    .nyu-logo-box {
+        padding: 6px 10px;
+    }
+
+    .nyu-logo-img {
+        height: 26px;
+    }
+}

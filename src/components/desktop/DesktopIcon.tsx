@@ -1,6 +1,6 @@
 import React from 'react';
-import { FaFolder, FaFilePdf, FaTrash, FaFolderOpen } from 'react-icons/fa';
 import { DesktopIcon as DesktopIconType } from '../../types/interfaces';
+import { getIconUrl } from '../../utils/icons';
 
 interface DesktopIconProps {
   icon: DesktopIconType;
@@ -11,26 +11,41 @@ interface DesktopIconProps {
 
 export const DesktopIcon: React.FC<DesktopIconProps> = ({ icon, onMouseDown, onDoubleClick, onRightClick }) => {
   const renderIconImage = () => {
-    const iconContainerStyle = "w-16 h-16 flex items-center justify-center text-4xl group-hover:scale-110 transition-transform duration-100 ease-in-out";
-    if (icon.icon === 'folder') return <div className={iconContainerStyle}><FaFolder className="text-blue-500 drop-shadow-md" /></div>;
-    if (icon.icon === 'pdf') return <div className={iconContainerStyle}><FaFilePdf className="text-red-600 drop-shadow-md" /></div>;
-    if (icon.icon === 'trash') return <div className={iconContainerStyle}><FaTrash className="text-gray-600 drop-shadow-md" /></div>;
-    if (icon.icon === 'finder') return <div className={iconContainerStyle}><FaFolderOpen className="text-sky-500 drop-shadow-md" /></div>;
-    return <div className={`${iconContainerStyle} bg-gray-400 text-white rounded-lg shadow-md`}>{icon.name[0]}</div>;
+    // Check if icon.icon is a generic name that mapping handles, or if we should pass it directly.
+    // getIconUrl handles generic mapping.
+    const iconUrl = getIconUrl(icon.icon);
+
+    return (
+      <div className="w-16 h-16 flex items-center justify-center group-hover:scale-110 transition-transform duration-200 ease-in-out filter drop-shadow-lg">
+        <img src={iconUrl} alt={icon.name} className="w-full h-full object-contain pointer-events-none" />
+      </div>
+    );
   };
 
   return (
     <div
-      className="absolute w-24 flex flex-col items-center cursor-pointer group"
+      className="absolute w-28 flex flex-col items-center cursor-pointer group select-none"
       style={{ left: `${icon.position?.x ?? 20}px`, top: `${icon.position?.y ?? 20}px` }}
       onMouseDown={(e) => onMouseDown(icon.id, e)}
       onDoubleClick={() => onDoubleClick(icon)}
       onContextMenu={(e) => onRightClick?.(icon, e)}
     >
       {renderIconImage()}
-      <div className="mt-1 bg-black bg-opacity-30 text-white px-1.5 py-0.5 rounded text-xs text-center w-full max-w-[90px] truncate shadow backdrop-blur-sm">
+      <span
+        className={`mt-1 px-2.5 py-0.5 rounded-[4px] text-[12px] leading-tight text-center w-[100px] font-medium text-white select-none ${
+          /* Use a subtle hover effect or selection state if we had one */
+          'group-hover:bg-white/10'
+          }`}
+        style={{
+          textShadow: '0 1px 3px rgba(0,0,0,0.8), 0 0 1px rgba(0,0,0,0.5)',
+          display: '-webkit-box',
+          WebkitLineClamp: 2,
+          WebkitBoxOrient: 'vertical',
+          overflow: 'hidden',
+        }}
+      >
         {icon.name}
-      </div>
+      </span>
     </div>
   );
 };

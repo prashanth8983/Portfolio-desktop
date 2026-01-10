@@ -3,7 +3,6 @@ const BASE_PATH = import.meta.env.BASE_URL;
 
 // Local icons in public/icons folder (converted from icns)
 const localIcons: Record<string, string> = {
-    chrome: 'icons/chrome.png',
     numbers: 'icons/numbers.png',
     folder: 'icons/folder.png',
     projects: 'icons/folder.png',
@@ -15,6 +14,8 @@ const localIcons: Record<string, string> = {
     finder: 'icons/finder.png',
     photos: 'icons/photos.png',
     safari: 'icons/safari.png',
+    calculator: 'icons/calculator.png',
+    terminal: 'icons/terminal.png',
 };
 
 // Icons8 CDN mapping
@@ -41,6 +42,8 @@ const icons8Map: Record<string, string> = {
     projects: 'opened-folder',
     documents: 'documents-folder',
     pdf: 'pdf',
+    // Education
+    education: 'graduation-cap',
     // Fallback
     app: 'mac-os',
     contact: 'address-book',

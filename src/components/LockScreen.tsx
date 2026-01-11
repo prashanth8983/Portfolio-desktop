@@ -42,8 +42,8 @@ export const LockScreen: React.FC<LockScreenProps> = ({ onUnlock, isLocked }) =>
     ];
 
     // --- State ---
-    const [bootState, setBootState] = useState<'booting' | 'hiding' | 'completed'>('completed');
-    const [bootProgress, setBootProgress] = useState(0);
+    const [bootState, _setBootState] = useState<'booting' | 'hiding' | 'completed'>('completed');
+    const [bootProgress, _setBootProgress] = useState(0);
     const [selectedUser, setSelectedUser] = useState<User | null>(null);
     const [password, setPassword] = useState('');
     const [loginStatus, setLoginStatus] = useState<'idle' | 'verifying' | 'success' | 'error'>('idle');

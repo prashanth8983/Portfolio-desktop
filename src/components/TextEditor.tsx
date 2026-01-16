@@ -48,7 +48,7 @@ interface TextEditorProps {
   fileName?: string;
 }
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:6060';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://portfolio-backend-prashanth.fly.dev';
 
 // Color options
 const TEXT_COLORS = [

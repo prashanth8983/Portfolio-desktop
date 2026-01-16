@@ -16,7 +16,7 @@ export interface DockItem {
 export interface Window {
   id: string;
   title: string;
-  type: 'browser' | 'finder' | 'pdf' | 'preview' | 'terminal' | 'projects' | 'photos' | 'mail' | 'music' | 'activity-monitor' | 'profile' | 'textedit' | 'other';
+  type: 'browser' | 'finder' | 'pdf' | 'preview' | 'terminal' | 'projects' | 'photos' | 'mail' | 'music' | 'activity-monitor' | 'profile' | 'textedit' | 'feedback' | 'settings' | 'bin' | 'stickynotes' | 'work-experience' | 'other';
   position: { x: number; y: number };
   size: { width: number; height: number };
   isMinimized: boolean;

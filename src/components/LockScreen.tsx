@@ -20,7 +20,7 @@ type User = {
 };
 
 interface LockScreenProps {
-    onUnlock: () => void;
+    onUnlock: (userId: string, userName: string) => void;
     isLocked: boolean;
 }
 
@@ -113,7 +113,7 @@ export const LockScreen: React.FC<LockScreenProps> = ({ onUnlock, isLocked }) =>
             setLoginStatus('verifying');
             setTimeout(() => {
                 setLoginStatus('success');
-                setTimeout(() => onUnlock(), 500);
+                setTimeout(() => onUnlock(selectedUser.id, selectedUser.name), 500);
             }, 1500);
         } else {
             if (!password.trim()) return;
@@ -122,7 +122,7 @@ export const LockScreen: React.FC<LockScreenProps> = ({ onUnlock, isLocked }) =>
                 // Mock password check - accept anything for demo
                 if (password.length > 0) {
                     setLoginStatus('success');
-                    setTimeout(() => onUnlock(), 500);
+                    setTimeout(() => onUnlock(selectedUser.id, selectedUser.name), 500);
                 } else {
                     setLoginStatus('error');
                     setTimeout(() => setLoginStatus('idle'), 500);

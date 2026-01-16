@@ -1,13 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { MacDesktop } from './desktop/MacDesktop';
 import { IOSMobileView } from './mobile/IOSMobileView';
 import { LockScreen } from './LockScreen';
 import { DesktopIcon, DockItem } from '../types/interfaces';
 import { getIconUrl } from '../utils/icons';
+import { isSessionUnlocked, setUnlocked, setLocked } from '../utils/session';
 
 const ResponsiveView: React.FC = () => {
   const [isMobile, setIsMobile] = useState<boolean>(window.innerWidth < 768);
-  const [isLocked, setIsLocked] = useState<boolean>(true);
+  // Check session on initial load to determine if user should see lock screen
+  const [isLocked, setIsLocked] = useState<boolean>(() => !isSessionUnlocked());
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
@@ -20,7 +22,7 @@ const ResponsiveView: React.FC = () => {
     const screenWidth = window.innerWidth;
     const rightMargin = 120; // Distance from right edge
     const topMargin = 50;   // Distance from top
-    const gridGap = 110;    // Vertical spacing
+    const gridGap = 95;     // Vertical spacing (reduced for more icons)
 
     const colX = screenWidth - rightMargin;
 
@@ -29,7 +31,9 @@ const ResponsiveView: React.FC = () => {
       { id: 'projects', name: 'Projects', icon: 'projects', type: 'folder', position: { x: colX, y: topMargin + gridGap } },
       { id: 'documents', name: 'Documents', icon: 'documents', type: 'folder', position: { x: colX, y: topMargin + gridGap * 2 } },
       { id: 'profile', name: 'Education', icon: 'education', type: 'app', position: { x: colX, y: topMargin + gridGap * 3 } },
-      { id: 'resume', name: 'Prashanth Kumar.pdf', icon: 'pdf', type: 'pdf', position: { x: colX, y: topMargin + gridGap * 4 }, content: './Resume.pdf' },
+      { id: 'work-experience', name: 'Experience', icon: 'work-experience', type: 'app', position: { x: colX, y: topMargin + gridGap * 4 } },
+      { id: 'feedback', name: 'Feedback.txt', icon: 'txt', type: 'app', position: { x: colX, y: topMargin + gridGap * 5 } },
+      { id: 'resume', name: 'Prashanth Kumar.pdf', icon: 'pdf', type: 'pdf', position: { x: colX, y: topMargin + gridGap * 6 }, content: './Resume.pdf' },
     ];
   };
 
@@ -97,21 +101,38 @@ const ResponsiveView: React.FC = () => {
       iconElement: <img src={getIconUrl('calendar')} alt="Calendar" className="w-full h-full object-contain drop-shadow-md" />,
     },
     {
-      id: 'preferences',
-      name: 'System Preferences',
-      iconElement: <img src={getIconUrl('preferences')} alt="System Preferences" className="w-full h-full object-contain drop-shadow-md" />,
+      id: 'stickynotes',
+      name: 'Sticky Notes',
+      iconElement: <img src={getIconUrl('stickynotes')} alt="Sticky Notes" className="w-full h-full object-contain drop-shadow-md" />,
     },
     {
-      id: 'trash-dock',
-      name: 'Trash',
-      iconElement: <img src={getIconUrl('trash')} alt="Trash" className="w-full h-full object-contain drop-shadow-md" />,
+      id: 'system-settings',
+      name: 'System Settings',
+      iconElement: <img src={getIconUrl('system-settings')} alt="System Settings" className="w-full h-full object-contain drop-shadow-md" />,
+    },
+    {
+      id: 'bin',
+      name: 'Bin',
+      iconElement: <img src={getIconUrl('bin')} alt="Bin" className="w-full h-full object-contain drop-shadow-md" />,
     },
   ];
 
+  // Handle unlock with session persistence
+  const handleUnlock = useCallback((userId: string, userName: string) => {
+    setUnlocked(userId, userName);
+    setIsLocked(false);
+  }, []);
+
+  // Handle lock with session update
+  const handleLock = useCallback(() => {
+    setLocked();
+    setIsLocked(true);
+  }, []);
+
   return (
     <>
-      <LockScreen isLocked={isLocked} onUnlock={() => setIsLocked(false)} />
-      {isMobile ? <IOSMobileView apps={apps} /> : <MacDesktop apps={apps} dockItems={dockItems} onLock={() => setIsLocked(true)} />}
+      <LockScreen isLocked={isLocked} onUnlock={handleUnlock} />
+      {isMobile ? <IOSMobileView apps={apps} /> : <MacDesktop apps={apps} dockItems={dockItems} onLock={handleLock} />}
     </>
   );
 };

@@ -1,0 +1,19 @@
+import React from 'react';
+
+interface AppleLogoProps extends React.SVGProps<SVGSVGElement> {
+    className?: string;
+}
+
+export const AppleLogo: React.FC<AppleLogoProps> = ({ className = "w-6 h-6", ...props }) => {
+    return (
+        <svg
+            viewBox="0 0 24 24"
+            fill="currentColor"
+            className={className}
+            {...props}
+        >
+            <path d="M12 20.5C11.2 20.8 10.2 21.5 8.5 21.5C5.5 21.5 3.0 18.0 3.0 12.5C3.0 7.5 6.5 5.5 9.5 5.5C10.8 5.5 11.5 5.8 12.0 6.2C12.5 5.8 13.2 5.5 14.5 5.5C17.5 5.5 21.0 7.5 21.0 12.5C21.0 18.0 18.5 21.5 15.5 21.5C13.8 21.5 12.8 20.8 12.0 20.5Z" stroke="none" />
+            <path d="M12 5C13 4 14 1 16 1C14 1 12 4 12 5Z" stroke="none" />
+        </svg>
+    );
+};

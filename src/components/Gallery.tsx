@@ -1,370 +1,430 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { IoClose, IoChevronBack, IoChevronForward, IoHeart, IoHeartOutline, IoShareOutline, IoTrashOutline, IoGridOutline, IoSquareOutline } from 'react-icons/io5';
+import React, { useState } from 'react';
+import { useTheme } from '../contexts/ThemeContext';
+import {
+  IoHeart,
+  IoHeartOutline,
+  IoSearch,
+  IoChevronBack,
+  IoChevronForward,
+  IoImageOutline,
+  IoPlayCircleOutline,
+  IoLocationOutline,
+  IoCalendarOutline,
+  IoTimeOutline,
+  IoShareOutline,
+  IoAddOutline,
+} from 'react-icons/io5';
+import { BsLayoutSidebar, BsGrid3X3Gap, BsAspectRatio } from 'react-icons/bs';
 
-interface GalleryItem {
+// --- Types ---
+type Photo = {
   id: string;
-  title: string;
-  description: string;
-  image?: string;
-  category: 'project' | 'certification' | 'memory';
+  url: string;
+  location: string;
   date: string;
-  gradient?: string;
-  icon?: string;
-  favorite?: boolean;
-}
-
-const galleryItems: GalleryItem[] = [
-  {
-    id: '1',
-    title: 'Portfolio Desktop',
-    description: 'Interactive macOS/iOS simulator portfolio with functional applications, window management, and responsive design.',
-    category: 'project',
-    date: 'January 2024',
-    gradient: 'from-blue-500 via-purple-500 to-pink-500',
-    icon: '💻'
-  },
-  {
-    id: '2',
-    title: 'AWS Certified Developer',
-    description: 'Amazon Web Services certification for cloud development and architecture.',
-    category: 'certification',
-    date: 'December 2023',
-    gradient: 'from-orange-400 via-amber-500 to-yellow-500',
-    icon: '🏆'
-  },
-  {
-    id: '3',
-    title: 'Full Stack Journey',
-    description: 'Started my journey as a full-stack developer, learning React, Node.js, and modern web technologies.',
-    category: 'memory',
-    date: 'June 2023',
-    gradient: 'from-green-400 via-emerald-500 to-teal-500',
-    icon: '🚀'
-  },
-  {
-    id: '4',
-    title: 'E-Commerce Platform',
-    description: 'Built a complete e-commerce solution with payment processing, inventory management, and analytics dashboard.',
-    category: 'project',
-    date: 'October 2023',
-    gradient: 'from-indigo-500 via-blue-500 to-cyan-500',
-    icon: '🛒'
-  },
-  {
-    id: '5',
-    title: 'First Tech Role',
-    description: 'Joined an amazing team as a software engineer, working on enterprise applications.',
-    category: 'memory',
-    date: 'August 2023',
-    gradient: 'from-rose-400 via-pink-500 to-fuchsia-500',
-    icon: '💼'
-  },
-  {
-    id: '6',
-    title: 'React Advanced Patterns',
-    description: 'Completed advanced React course covering hooks, context, performance optimization, and testing.',
-    category: 'certification',
-    date: 'September 2023',
-    gradient: 'from-cyan-400 via-sky-500 to-blue-500',
-    icon: '⚛️'
-  },
-];
-
-const SIDEBAR_ITEMS = [
-  { id: 'all', label: 'Library', icon: '📷' },
-  { id: 'favorites', label: 'Favorites', icon: '❤️' },
-  { id: 'project', label: 'Projects', icon: '💻' },
-  { id: 'certification', label: 'Certifications', icon: '🎓' },
-  { id: 'memory', label: 'Memories', icon: '✨' },
-];
+  time: string;
+  isFavorite: boolean;
+  aspect: 'landscape' | 'portrait';
+};
 
 export const Gallery: React.FC = () => {
-  const [items, setItems] = useState<GalleryItem[]>(galleryItems);
-  const [selectedImage, setSelectedImage] = useState<GalleryItem | null>(null);
-  const [activeFilter, setActiveFilter] = useState<string>('all');
-  const [viewMode, setViewMode] = useState<'grid' | 'large'>('grid');
+  const { isDark } = useTheme();
+  const [view, setView] = useState<'grid' | 'detail'>('grid');
+  const [selectedPhotoId, setSelectedPhotoId] = useState<string | null>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [activeSection, setActiveSection] = useState('library');
+  const [favorites, setFavorites] = useState<Set<string>>(new Set(['1', '4', '6']));
 
-  const filteredItems = activeFilter === 'all'
-    ? items
-    : activeFilter === 'favorites'
-      ? items.filter(item => item.favorite)
-      : items.filter(item => item.category === activeFilter);
+  // --- Mock Data ---
+  const photos: Photo[] = [
+    { id: '1', url: 'https://images.unsplash.com/photo-1477346611705-65d1883cee1e?q=80&w=1000&auto=format&fit=crop', location: 'Yosemite Valley, CA', date: 'October 24, 2026', time: '5:42 PM', isFavorite: true, aspect: 'landscape' },
+    { id: '2', url: 'https://images.unsplash.com/photo-1469474968028-56623f02e42e?q=80&w=1000&auto=format&fit=crop', location: 'Highlands, Scotland', date: 'September 12, 2026', time: '2:15 PM', isFavorite: false, aspect: 'landscape' },
+    { id: '3', url: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?q=80&w=1000&auto=format&fit=crop', location: 'Alps, Switzerland', date: 'August 5, 2026', time: '10:30 AM', isFavorite: false, aspect: 'portrait' },
+    { id: '4', url: 'https://images.unsplash.com/photo-1472214103451-9374bd1c7dd1?q=80&w=1000&auto=format&fit=crop', location: 'Glacier Point', date: 'July 20, 2026', time: '6:00 PM', isFavorite: true, aspect: 'landscape' },
+    { id: '5', url: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?q=80&w=1000&auto=format&fit=crop', location: 'Malibu, CA', date: 'June 15, 2026', time: '7:45 PM', isFavorite: false, aspect: 'landscape' },
+    { id: '6', url: 'https://images.unsplash.com/photo-1519681393784-d120267933ba?q=80&w=1000&auto=format&fit=crop', location: 'Kyoto, Japan', date: 'April 10, 2026', time: '11:20 AM', isFavorite: true, aspect: 'portrait' },
+    { id: '7', url: 'https://images.unsplash.com/photo-1533052733633-8c46447814b7?q=80&w=1000&auto=format&fit=crop', location: 'Iceland', date: 'March 22, 2026', time: '3:30 PM', isFavorite: false, aspect: 'landscape' },
+    { id: '8', url: 'https://images.unsplash.com/photo-1504608524841-42fe6f032b4b?q=80&w=1000&auto=format&fit=crop', location: 'Hurricane Ridge, WA', date: 'February 14, 2026', time: '4:15 PM', isFavorite: false, aspect: 'landscape' },
+  ];
 
-  const handlePrevious = useCallback(() => {
-    if (!selectedImage) return;
-    const currentIndex = filteredItems.findIndex(item => item.id === selectedImage.id);
-    const prevIndex = currentIndex > 0 ? currentIndex - 1 : filteredItems.length - 1;
-    setSelectedImage(filteredItems[prevIndex]);
-  }, [selectedImage, filteredItems]);
+  const selectedPhoto = photos.find(p => p.id === selectedPhotoId);
+  const currentIdx = selectedPhotoId ? photos.findIndex(p => p.id === selectedPhotoId) : -1;
 
-  const handleNext = useCallback(() => {
-    if (!selectedImage) return;
-    const currentIndex = filteredItems.findIndex(item => item.id === selectedImage.id);
-    const nextIndex = currentIndex < filteredItems.length - 1 ? currentIndex + 1 : 0;
-    setSelectedImage(filteredItems[nextIndex]);
-  }, [selectedImage, filteredItems]);
-
-  const toggleFavorite = (id: string, e?: React.MouseEvent) => {
-    e?.stopPropagation();
-    setItems(items.map(item =>
-      item.id === id ? { ...item, favorite: !item.favorite } : item
-    ));
-    if (selectedImage?.id === id) {
-      setSelectedImage(prev => prev ? { ...prev, favorite: !prev.favorite } : null);
-    }
+  // --- Handlers ---
+  const openPhoto = (id: string) => {
+    setSelectedPhotoId(id);
+    setView('detail');
   };
 
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (!selectedImage) return;
-      if (e.key === 'ArrowLeft') handlePrevious();
-      else if (e.key === 'ArrowRight') handleNext();
-      else if (e.key === 'Escape') setSelectedImage(null);
-    };
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [selectedImage, handlePrevious, handleNext]);
+  const nextPhoto = () => {
+    if (currentIdx < photos.length - 1) setSelectedPhotoId(photos[currentIdx + 1].id);
+  };
 
-  const currentIndex = selectedImage
-    ? filteredItems.findIndex(item => item.id === selectedImage.id) + 1
-    : 0;
+  const prevPhoto = () => {
+    if (currentIdx > 0) setSelectedPhotoId(photos[currentIdx - 1].id);
+  };
+
+  const toggleFavorite = (id: string) => {
+    setFavorites(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const displayPhotos = activeSection === 'favorites'
+    ? photos.filter(p => favorites.has(p.id))
+    : photos;
 
   return (
-    <div className="flex h-full bg-[#1e1e1e]">
-      {/* Sidebar */}
-      <div className="w-48 bg-[#2d2d2d] border-r border-white/10 flex flex-col">
-        <div className="p-3 pt-4">
-          <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-2 mb-2">
-            Photos
-          </h2>
-          <nav className="space-y-0.5">
-            {SIDEBAR_ITEMS.map(item => (
+    <div className={`flex flex-col h-full w-full font-sans select-none overflow-hidden ${isDark ? 'bg-[#1e1e1e]' : 'bg-[#F5F5F5]'}`}>
+
+      {/* ========== TOOLBAR (macOS Photos Style) ========== */}
+      <div className={`h-[52px] flex items-center px-4 shrink-0 relative
+        ${isDark
+          ? 'bg-[#2d2d2d]/80 backdrop-blur-xl border-b border-white/10'
+          : 'bg-[#F5F5F5]/80 backdrop-blur-xl border-b border-black/10'}`}
+      >
+        {/* Left Section - Sidebar Toggle & Navigation */}
+        <div className="flex items-center gap-3 pl-[56px] relative z-50">
+          {/* Sidebar Toggle */}
+          <button
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            className={`p-1.5 rounded-md transition-all ${sidebarOpen
+              ? (isDark ? 'bg-white/15 text-white' : 'bg-black/10 text-gray-700')
+              : (isDark ? 'text-gray-400 hover:bg-white/10 hover:text-gray-200' : 'text-gray-500 hover:bg-black/5 hover:text-gray-700')}`}
+          >
+            <BsLayoutSidebar size={16} />
+          </button>
+
+          {/* Divider */}
+          <div className={`h-4 w-px ${isDark ? 'bg-white/10' : 'bg-black/10'}`} />
+
+          {/* Navigation Arrows (in detail view) */}
+          {view === 'detail' && (
+            <div className="flex items-center gap-1">
               <button
-                key={item.id}
-                onClick={() => setActiveFilter(item.id)}
-                className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-sm transition-colors ${
-                  activeFilter === item.id
-                    ? 'bg-blue-500/20 text-blue-400'
-                    : 'text-gray-300 hover:bg-white/5'
-                }`}
+                onClick={prevPhoto}
+                disabled={currentIdx <= 0}
+                className={`p-1 rounded transition-colors disabled:opacity-30 ${isDark ? 'text-gray-300 hover:bg-white/10' : 'text-gray-600 hover:bg-black/5'}`}
               >
-                <span>{item.icon}</span>
-                <span>{item.label}</span>
-                {item.id === 'favorites' && (
-                  <span className="ml-auto text-xs text-gray-500">
-                    {items.filter(i => i.favorite).length}
-                  </span>
-                )}
+                <IoChevronBack size={18} />
+              </button>
+              <button
+                onClick={nextPhoto}
+                disabled={currentIdx >= photos.length - 1}
+                className={`p-1 rounded transition-colors disabled:opacity-30 ${isDark ? 'text-gray-300 hover:bg-white/10' : 'text-gray-600 hover:bg-black/5'}`}
+              >
+                <IoChevronForward size={18} />
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Center - View Tabs (macOS Segmented Control) */}
+        <div className="absolute left-1/2 -translate-x-1/2 flex items-center">
+          <div className={`flex p-0.5 rounded-lg ${isDark ? 'bg-white/10' : 'bg-black/5'}`}>
+            {['Years', 'Months', 'Days', 'All Photos'].map((tab, i) => (
+              <button
+                key={tab}
+                className={`px-3 py-1 text-[11px] font-medium rounded-md transition-all
+                  ${i === 3
+                    ? (isDark ? 'bg-[#3d3d3d] text-white shadow-sm' : 'bg-white text-gray-900 shadow-sm')
+                    : (isDark ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-700')}`}
+              >
+                {tab}
               </button>
             ))}
-          </nav>
+          </div>
+        </div>
+
+        {/* Right Section - Actions */}
+        <div className="flex items-center gap-2 ml-auto relative z-50">
+          {view === 'detail' && (
+            <>
+              <button
+                onClick={() => selectedPhotoId && toggleFavorite(selectedPhotoId)}
+                className={`p-1.5 rounded-md transition-colors ${isDark ? 'hover:bg-white/10' : 'hover:bg-black/5'}`}
+              >
+                {selectedPhotoId && favorites.has(selectedPhotoId) ? (
+                  <IoHeart size={18} className="text-red-500" />
+                ) : (
+                  <IoHeartOutline size={18} className={isDark ? 'text-gray-400' : 'text-gray-500'} />
+                )}
+              </button>
+              <button className={`p-1.5 rounded-md transition-colors ${isDark ? 'text-gray-400 hover:bg-white/10' : 'text-gray-500 hover:bg-black/5'}`}>
+                <IoShareOutline size={18} />
+              </button>
+              <div className={`h-4 w-px mx-1 ${isDark ? 'bg-white/10' : 'bg-black/10'}`} />
+            </>
+          )}
+
+          {/* Aspect Ratio / View Toggle */}
+          <button className={`p-1.5 rounded-md transition-colors ${isDark ? 'text-gray-400 hover:bg-white/10' : 'text-gray-500 hover:bg-black/5'}`}>
+            <BsAspectRatio size={16} />
+          </button>
+
+          {/* Search */}
+          <div className="relative">
+            <IoSearch size={14} className={`absolute left-2 top-1/2 -translate-y-1/2 ${isDark ? 'text-gray-500' : 'text-gray-400'}`} />
+            <input
+              type="text"
+              placeholder="Search"
+              className={`pl-7 pr-2 py-1 text-xs rounded-md w-28 focus:w-36 transition-all outline-none
+                ${isDark
+                  ? 'bg-white/10 text-gray-200 placeholder:text-gray-500 focus:bg-white/15 focus:ring-1 focus:ring-blue-500/50'
+                  : 'bg-black/5 text-gray-700 placeholder:text-gray-400 focus:bg-white focus:ring-1 focus:ring-blue-500/50'}`}
+            />
+          </div>
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col min-w-0">
-        {/* Toolbar */}
-        <div className="h-12 bg-[#2d2d2d] border-b border-white/10 flex items-center justify-between px-4">
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-300 font-medium">
-              {activeFilter === 'all' ? 'Library' :
-                activeFilter === 'favorites' ? 'Favorites' :
-                  activeFilter.charAt(0).toUpperCase() + activeFilter.slice(1) + 's'}
-            </span>
-            <span className="text-xs text-gray-500">
-              {filteredItems.length} {filteredItems.length === 1 ? 'item' : 'items'}
-            </span>
+      {/* ========== MAIN CONTENT ========== */}
+      <div className="flex flex-1 overflow-hidden">
+
+        {/* ========== SIDEBAR ========== */}
+        <div
+          className={`flex flex-col overflow-hidden shrink-0 transition-all duration-300 ease-in-out
+            ${isDark
+              ? 'bg-[#252525]/80 backdrop-blur-xl'
+              : 'bg-[#F0F0F0]/80 backdrop-blur-xl'}
+            ${sidebarOpen ? 'w-[180px] border-r' : 'w-0 border-r-0'}
+            ${isDark ? 'border-white/5' : 'border-black/5'}`}
+        >
+          {/* Spacer for traffic lights area */}
+          <div className="h-0 shrink-0" />
+
+          {/* Sidebar Content */}
+          <div className={`flex-1 overflow-y-auto px-2 py-3 ${sidebarOpen ? 'opacity-100' : 'opacity-0'} transition-opacity duration-200`}>
+            {/* Library Section */}
+            <div className="mb-4">
+              <h3 className={`text-[10px] font-semibold uppercase tracking-wider px-3 mb-1 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                Library
+              </h3>
+              <SidebarItem
+                icon={<IoImageOutline size={16} />}
+                label="Library"
+                active={activeSection === 'library'}
+                onClick={() => { setActiveSection('library'); setView('grid'); }}
+                isDark={isDark}
+              />
+              <SidebarItem
+                icon={<IoHeartOutline size={16} />}
+                label="Favorites"
+                active={activeSection === 'favorites'}
+                onClick={() => { setActiveSection('favorites'); setView('grid'); }}
+                isDark={isDark}
+              />
+              <SidebarItem
+                icon={<IoTimeOutline size={16} />}
+                label="Recents"
+                active={activeSection === 'recents'}
+                onClick={() => { setActiveSection('recents'); setView('grid'); }}
+                isDark={isDark}
+              />
+            </div>
+
+            {/* Media Types Section */}
+            <div className="mb-4">
+              <h3 className={`text-[10px] font-semibold uppercase tracking-wider px-3 mb-1 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                Media Types
+              </h3>
+              <SidebarItem icon={<IoPlayCircleOutline size={16} />} label="Videos" isDark={isDark} />
+              <SidebarItem icon={<BsGrid3X3Gap size={14} />} label="Screenshots" isDark={isDark} />
+            </div>
+
+            {/* Albums Section */}
+            <div className="mb-4">
+              <div className="flex items-center justify-between px-3 mb-1">
+                <h3 className={`text-[10px] font-semibold uppercase tracking-wider ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                  Albums
+                </h3>
+                <button className={`p-0.5 rounded ${isDark ? 'text-gray-500 hover:text-gray-300' : 'text-gray-400 hover:text-gray-600'}`}>
+                  <IoAddOutline size={14} />
+                </button>
+              </div>
+              <SidebarItem icon={<IoLocationOutline size={16} />} label="Places" isDark={isDark} />
+            </div>
           </div>
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => setViewMode('grid')}
-              className={`p-1.5 rounded transition-colors ${
-                viewMode === 'grid' ? 'bg-white/10 text-white' : 'text-gray-400 hover:text-white'
-              }`}
-              title="Grid view"
-            >
-              <IoGridOutline className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => setViewMode('large')}
-              className={`p-1.5 rounded transition-colors ${
-                viewMode === 'large' ? 'bg-white/10 text-white' : 'text-gray-400 hover:text-white'
-              }`}
-              title="Large view"
-            >
-              <IoSquareOutline className="w-4 h-4" />
-            </button>
+
+          {/* Footer Stats */}
+          <div className={`px-3 py-3 border-t text-center shrink-0 ${sidebarOpen ? 'opacity-100' : 'opacity-0'} transition-opacity
+            ${isDark ? 'border-white/5' : 'border-black/5'}`}>
+            <div className={`text-[10px] ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+              {displayPhotos.length} Photos
+            </div>
           </div>
         </div>
 
-        {/* Gallery Grid */}
-        <div className="flex-1 overflow-auto p-4">
-          {filteredItems.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full text-gray-400">
-              <span className="text-5xl mb-4">
-                {activeFilter === 'favorites' ? '❤️' : '📷'}
-              </span>
-              <p className="text-sm">
-                {activeFilter === 'favorites'
-                  ? 'No favorites yet'
-                  : 'No items in this category'}
-              </p>
+        {/* ========== PHOTO CANVAS ========== */}
+        <div className={`flex-1 relative overflow-hidden ${isDark ? 'bg-[#1e1e1e]' : 'bg-white'}`}>
+
+          {view === 'grid' ? (
+            /* ========== GRID VIEW ========== */
+            <div className="h-full overflow-y-auto p-4">
+              {/* Section Header */}
+              <div className="flex items-center justify-between mb-4 px-2">
+                <h2 className={`text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                  {activeSection === 'favorites' ? 'Favorites' : 'All Photos'}
+                </h2>
+                <span className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                  {displayPhotos.length} items
+                </span>
+              </div>
+
+              {/* Photo Grid */}
+              {displayPhotos.length > 0 ? (
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-1">
+                  {displayPhotos.map(photo => (
+                    <div
+                      key={photo.id}
+                      onClick={() => openPhoto(photo.id)}
+                      className={`group relative aspect-square cursor-pointer overflow-hidden rounded-sm
+                        ${isDark ? 'bg-gray-800' : 'bg-gray-100'}`}
+                    >
+                      <img
+                        src={photo.url}
+                        alt={photo.location}
+                        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                        loading="lazy"
+                      />
+                      {/* Hover Overlay */}
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
+
+                      {/* Favorite Badge */}
+                      {favorites.has(photo.id) && (
+                        <div className="absolute bottom-1.5 right-1.5 p-1 rounded-full bg-black/40 backdrop-blur-sm">
+                          <IoHeart size={12} className="text-white" />
+                        </div>
+                      )}
+
+                      {/* Selection Ring on Hover */}
+                      <div className="absolute inset-0 ring-2 ring-blue-500 ring-inset opacity-0 group-hover:opacity-100 transition-opacity rounded-sm" />
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="h-full flex flex-col items-center justify-center">
+                  <IoHeartOutline size={48} className={isDark ? 'text-gray-600' : 'text-gray-300'} />
+                  <p className={`mt-3 text-sm ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>No favorites yet</p>
+                </div>
+              )}
+
+              {/* Footer */}
+              <div className={`py-8 text-center text-xs ${isDark ? 'text-gray-600' : 'text-gray-400'}`}>
+                Synced with iCloud
+              </div>
             </div>
           ) : (
-            <div className={`grid gap-2 ${
-              viewMode === 'grid'
-                ? 'grid-cols-3 md:grid-cols-4 lg:grid-cols-5'
-                : 'grid-cols-2 md:grid-cols-3'
-            }`}>
-              {filteredItems.map((item) => (
-                <div
-                  key={item.id}
-                  onClick={() => setSelectedImage(item)}
-                  className={`group relative rounded-lg overflow-hidden cursor-pointer bg-[#333] ${
-                    viewMode === 'grid' ? 'aspect-square' : 'aspect-[4/3]'
-                  }`}
+            /* ========== DETAIL VIEW ========== */
+            <div className="h-full flex flex-col bg-black">
+
+              {/* Back to Grid Button */}
+              <button
+                onClick={() => setView('grid')}
+                className="absolute top-3 left-3 z-20 flex items-center gap-1 px-2 py-1 rounded-md bg-white/10 hover:bg-white/20 text-white/80 hover:text-white text-xs font-medium transition-colors backdrop-blur-sm"
+              >
+                <IoChevronBack size={14} />
+                <span>Library</span>
+              </button>
+
+              {/* Main Image Container */}
+              <div className="flex-1 flex items-center justify-center p-8 relative group">
+                {selectedPhoto && (
+                  <img
+                    src={selectedPhoto.url}
+                    alt={selectedPhoto.location}
+                    className="max-w-full max-h-full object-contain shadow-2xl rounded-sm"
+                    style={{
+                      animation: 'fadeIn 0.2s ease-out',
+                    }}
+                  />
+                )}
+
+                {/* Navigation Arrows (Large, on sides) */}
+                <button
+                  onClick={prevPhoto}
+                  disabled={currentIdx <= 0}
+                  className="absolute left-4 top-1/2 -translate-y-1/2 p-2 rounded-full bg-black/40 hover:bg-black/60 text-white/70 hover:text-white transition-all opacity-0 group-hover:opacity-100 disabled:opacity-0"
                 >
-                  {item.image ? (
-                    <img
-                      src={item.image}
-                      alt={item.title}
-                      className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                    />
-                  ) : (
-                    <div className={`w-full h-full bg-gradient-to-br ${item.gradient} flex items-center justify-center transition-transform duration-300 group-hover:scale-105`}>
-                      <span className={viewMode === 'grid' ? 'text-4xl' : 'text-6xl'}>
-                        {item.icon}
-                      </span>
-                    </div>
-                  )}
+                  <IoChevronBack size={24} />
+                </button>
+                <button
+                  onClick={nextPhoto}
+                  disabled={currentIdx >= photos.length - 1}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 p-2 rounded-full bg-black/40 hover:bg-black/60 text-white/70 hover:text-white transition-all opacity-0 group-hover:opacity-100 disabled:opacity-0"
+                >
+                  <IoChevronForward size={24} />
+                </button>
 
-                  {/* Favorite indicator */}
-                  {item.favorite && (
-                    <div className="absolute top-2 right-2">
-                      <IoHeart className="w-4 h-4 text-red-500 drop-shadow-lg" />
-                    </div>
-                  )}
-
-                  {/* Hover overlay */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                    <div className="absolute bottom-0 left-0 right-0 p-3">
-                      <p className="text-white text-sm font-medium truncate">{item.title}</p>
-                      <p className="text-gray-300 text-xs">{item.date}</p>
-                    </div>
+                {/* Info Overlay (Bottom) */}
+                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-4 px-4 py-2 rounded-full bg-black/50 backdrop-blur-md border border-white/10 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="flex items-center gap-1.5">
+                    <IoLocationOutline size={14} className="text-gray-400" />
+                    <span className="text-xs text-white font-medium">{selectedPhoto?.location}</span>
+                  </div>
+                  <div className="w-px h-3 bg-white/20" />
+                  <div className="flex items-center gap-1.5">
+                    <IoCalendarOutline size={14} className="text-gray-400" />
+                    <span className="text-xs text-white font-medium">{selectedPhoto?.date}</span>
                   </div>
                 </div>
-              ))}
+              </div>
+
+              {/* Filmstrip (Bottom) */}
+              <div className="h-[72px] bg-[#1a1a1a] border-t border-white/5 flex items-center justify-center gap-1 px-4 shrink-0 overflow-x-auto">
+                {photos.map((photo) => (
+                  <button
+                    key={photo.id}
+                    onClick={() => setSelectedPhotoId(photo.id)}
+                    className={`h-12 w-12 shrink-0 rounded-sm overflow-hidden transition-all
+                      ${photo.id === selectedPhotoId
+                        ? 'ring-2 ring-white scale-110 z-10'
+                        : 'opacity-40 hover:opacity-70 hover:scale-105'}`}
+                  >
+                    <img src={photo.url} className="w-full h-full object-cover" alt="" />
+                  </button>
+                ))}
+              </div>
             </div>
           )}
         </div>
       </div>
 
-      {/* Lightbox Modal */}
-      {selectedImage && (
-        <div
-          className="fixed inset-0 bg-black/95 z-50 flex flex-col"
-          onClick={() => setSelectedImage(null)}
-        >
-          {/* Lightbox Toolbar */}
-          <div
-            className="h-14 flex items-center justify-between px-4 bg-black/50"
-            onClick={e => e.stopPropagation()}
-          >
-            <button
-              onClick={() => setSelectedImage(null)}
-              className="p-2 text-white/70 hover:text-white transition-colors"
-            >
-              <IoClose className="w-6 h-6" />
-            </button>
-            <div className="text-sm text-gray-400">
-              {currentIndex} of {filteredItems.length}
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={(e) => toggleFavorite(selectedImage.id, e)}
-                className="p-2 text-white/70 hover:text-white transition-colors"
-              >
-                {selectedImage.favorite
-                  ? <IoHeart className="w-5 h-5 text-red-500" />
-                  : <IoHeartOutline className="w-5 h-5" />
-                }
-              </button>
-              <button className="p-2 text-white/70 hover:text-white transition-colors">
-                <IoShareOutline className="w-5 h-5" />
-              </button>
-              <button className="p-2 text-white/70 hover:text-white transition-colors">
-                <IoTrashOutline className="w-5 h-5" />
-              </button>
-            </div>
-          </div>
-
-          {/* Main content */}
-          <div className="flex-1 flex items-center justify-center relative min-h-0">
-            {/* Previous button */}
-            <button
-              onClick={(e) => { e.stopPropagation(); handlePrevious(); }}
-              className="absolute left-4 p-3 text-white/50 hover:text-white bg-black/30 hover:bg-black/50 rounded-full transition-all z-10"
-            >
-              <IoChevronBack className="w-8 h-8" />
-            </button>
-
-            {/* Image */}
-            <div
-              className="max-w-[85%] max-h-[80vh] flex items-center justify-center"
-              onClick={e => e.stopPropagation()}
-            >
-              {selectedImage.image ? (
-                <img
-                  src={selectedImage.image}
-                  alt={selectedImage.title}
-                  className="max-w-full max-h-[80vh] object-contain rounded-lg shadow-2xl"
-                />
-              ) : (
-                <div className={`w-[500px] h-[400px] bg-gradient-to-br ${selectedImage.gradient} rounded-lg shadow-2xl flex items-center justify-center`}>
-                  <span className="text-9xl">{selectedImage.icon}</span>
-                </div>
-              )}
-            </div>
-
-            {/* Next button */}
-            <button
-              onClick={(e) => { e.stopPropagation(); handleNext(); }}
-              className="absolute right-4 p-3 text-white/50 hover:text-white bg-black/30 hover:bg-black/50 rounded-full transition-all z-10"
-            >
-              <IoChevronForward className="w-8 h-8" />
-            </button>
-          </div>
-
-          {/* Info panel */}
-          <div
-            className="bg-black/50 px-6 py-4"
-            onClick={e => e.stopPropagation()}
-          >
-            <div className="max-w-2xl mx-auto">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <h2 className="text-xl font-semibold text-white mb-1">
-                    {selectedImage.title}
-                  </h2>
-                  <p className="text-sm text-gray-400 mb-2">{selectedImage.date}</p>
-                  <p className="text-sm text-gray-300 leading-relaxed">
-                    {selectedImage.description}
-                  </p>
-                </div>
-                <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                  selectedImage.category === 'project'
-                    ? 'bg-blue-500/20 text-blue-400'
-                    : selectedImage.category === 'certification'
-                      ? 'bg-amber-500/20 text-amber-400'
-                      : 'bg-pink-500/20 text-pink-400'
-                }`}>
-                  {selectedImage.category}
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Inline keyframes for animation */}
+      <style>{`
+        @keyframes fadeIn {
+          from { opacity: 0; transform: scale(0.98); }
+          to { opacity: 1; transform: scale(1); }
+        }
+      `}</style>
     </div>
   );
-};
+}
+
+// ========== SIDEBAR ITEM COMPONENT ==========
+const SidebarItem = ({
+  icon,
+  label,
+  active = false,
+  onClick,
+  isDark
+}: {
+  icon: React.ReactNode;
+  label: string;
+  active?: boolean;
+  onClick?: () => void;
+  isDark: boolean;
+}) => (
+  <button
+    onClick={onClick}
+    className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-md text-[13px] transition-colors mb-0.5
+      ${active
+        ? (isDark ? 'bg-white/15 text-white font-medium' : 'bg-blue-500 text-white font-medium')
+        : (isDark ? 'text-gray-400 hover:bg-white/5 hover:text-gray-200' : 'text-gray-600 hover:bg-black/5 hover:text-gray-800')}`}
+  >
+    <span className={active ? '' : 'opacity-70'}>{icon}</span>
+    <span>{label}</span>
+  </button>
+);

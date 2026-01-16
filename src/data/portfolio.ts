@@ -25,6 +25,20 @@ export interface Experience {
     description: string[];
 }
 
+export interface ExperienceCard {
+    id: string;
+    role: string;
+    company: string;
+    periodStart: string;
+    periodEnd: string;
+    description: string;
+    skills: string[];
+    theme: 'midnight' | 'obsidian' | 'titanium';
+    cardNumber: string;
+    cvv: string;
+    orientation?: 'landscape' | 'portrait';
+}
+
 export interface Education {
     degree: string;
     institution: string;
@@ -141,5 +155,47 @@ export const education: Education[] = [
         degree: 'Bachelor of Science in Computer Science',
         institution: 'State University',
         year: '2017'
+    }
+];
+
+export const experienceCards: ExperienceCard[] = [
+    {
+        id: '1',
+        role: 'SOFTWARE ENGINEER',
+        company: 'NYU IT',
+        periodStart: '01/25',
+        periodEnd: 'PRESENT',
+        description: 'Full-Stack Dev. AWS Lambda APIs. React.js Frontend. 30% Runtime Reduction.',
+        skills: ['React', 'AWS', 'TypeScript'],
+        theme: 'titanium',
+        cardNumber: '4242 0125 2026 3456',
+        cvv: '025',
+        orientation: 'landscape'
+    },
+    {
+        id: '2',
+        role: 'SOFTWARE ENGINEER',
+        company: 'KAMPD',
+        periodStart: '08/21',
+        periodEnd: '08/24',
+        description: '10+ Microservices. 70% Latency Cut. 5x Throughput. 99.9% Uptime.',
+        skills: ['Go', 'Node.js', 'K8s'],
+        theme: 'midnight',
+        cardNumber: '5354 0821 0824 0092',
+        cvv: '821',
+        orientation: 'landscape'
+    },
+    {
+        id: '3',
+        role: 'DATA ENGINEER',
+        company: 'DATA WEAVE',
+        periodStart: '03/21',
+        periodEnd: '08/21',
+        description: 'ETL Pipelines. Kafka Streaming. 100GB+ Daily Processing.',
+        skills: ['Python', 'Kafka', 'AWS'],
+        theme: 'obsidian',
+        cardNumber: '3712 0321 0821 1120',
+        cvv: '321',
+        orientation: 'portrait'
     }
 ];

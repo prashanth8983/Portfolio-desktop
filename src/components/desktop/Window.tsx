@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Window as WindowType } from '../../types/interfaces';
 import { useTheme } from '../../contexts/ThemeContext';
-import { IoClose, IoRemove, IoExpand, IoContract } from 'react-icons/io5';
+
 
 interface WindowProps {
     window: WindowType;
@@ -24,7 +24,6 @@ export const Window: React.FC<WindowProps> = ({
     onDragStart,
     onResizeStart,
 }) => {
-    const [isHoveringControls, setIsHoveringControls] = useState(false);
     const { isDark } = useTheme();
 
     // Check for special window types that need different styling
@@ -32,27 +31,78 @@ export const Window: React.FC<WindowProps> = ({
     const isFinder = window.type === 'finder';
     const isBrowser = window.type === 'browser';
     const isPreview = window.type === 'preview';
-    const isTextEdit = window.type === 'textedit';
+    const isTextEdit = window.type === 'textedit' || window.type === 'feedback';
     const isCalculator = window.title === 'Calculator';
 
-    // Traffic Lights Component with react-icons
+    // Traffic Lights Component with custom SVGs
     const TrafficLights = ({ className = '', size = 'normal' }: { className?: string; size?: 'normal' | 'large' }) => {
         const buttonSize = size === 'large' ? 'w-[14px] h-[14px]' : 'w-3 h-3';
-        const iconSize = size === 'large' ? 8 : 6;
+        const iconSize = size === 'large' ? 'w-2 h-2' : 'w-1.5 h-1.5';
+
+        // Custom icons for the buttons
+        const CloseIcon = () => (
+            <svg className={`${iconSize} text-[#4c0002] opacity-0 group-hover:opacity-100 transition-opacity`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+        );
+
+        const MinimizeIcon = () => (
+            <svg className={`${iconSize} text-[#5c4002] opacity-0 group-hover:opacity-100 transition-opacity`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+        );
+
+        const MaximizeIcon = () => {
+            // If window is resizable/maximizable but not calculator
+            if (isCalculator) return null; // Or show nothing
+
+            // Expand/Contract arrows (diagonal top-left to bottom-right)
+            return (
+                <svg className={`${iconSize} text-[#004d05] opacity-0 group-hover:opacity-100 transition-opacity`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round">
+                    {window.isFullscreen ? (
+                        /* Arrows pointing inward (Contract) - Top-Left and Bottom-Right meeting center */
+                        <>
+                            <polyline points="4 10 10 10 10 4"></polyline>
+                            <polyline points="20 14 14 14 14 20"></polyline>
+                            <line x1="10" y1="10" x2="3" y2="3"></line>
+                            <line x1="14" y1="14" x2="21" y2="21"></line>
+                        </>
+                    ) : (
+                        /* Arrows pointing outward (Expand) - Top-Left and Bottom-Right moving away */
+                        <>
+                            <polyline points="9 3 3 3 3 9"></polyline>
+                            <polyline points="15 21 21 21 21 15"></polyline>
+                            <line x1="3" y1="3" x2="10" y2="10"></line>
+                            <line x1="21" y1="21" x2="14" y2="14"></line>
+                        </>
+                    )}
+                </svg>
+            );
+        };
+
+        // Plus Icon for non-expanding windows (About etc), but user asked for "same kind of traffic light but with outward arrow...". 
+        // Wait, request says: "use this kind of traffic light [with x, -, +] in all windows which are not supposed to expland like about, other info, settings etc."
+        // AND "same kind of traffic light but with outward arrow chevero left and right kind but diagonal from top left and bittom right [for regular windows]"
+
+        const ZoomIcon = () => (
+            <svg className={`${iconSize} text-[#004d05] opacity-0 group-hover:opacity-100 transition-opacity`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+        );
+
+        // Determine which icon to show for green button
+        const isStandardWindow = isBrowser || isFinder || isTerminal || isPreview || isTextEdit;
+        const GreenButtonIcon = isStandardWindow && !isCalculator ? MaximizeIcon : ZoomIcon;
 
         return (
             <div
-                className={`traffic-lights flex gap-2 z-50 ${className}`}
-                onMouseEnter={() => setIsHoveringControls(true)}
-                onMouseLeave={() => setIsHoveringControls(false)}
+                className={`traffic-lights flex gap-2 z-50 group ${className}`}
             >
+                {/* Close (Red) */}
                 <button
-                    className={`${buttonSize} rounded-full flex items-center justify-center transition-all duration-150 border
-                        ${!isActive && !isHoveringControls
-                            ? isDark ? 'bg-[#4a4a4a] border-[#3a3a3a]' : 'bg-[#d1d1d1] border-[#c1c1c1]'
-                            : 'bg-[#FF5F57] border-[#E0443E] hover:bg-[#FF4136]'
-                        }
-                    `}
+                    className={`${buttonSize} rounded-full flex items-center justify-center transition-all duration-150 border bg-[#FF5F57] border-[#E0443E] active:bg-[#BF4C46] focus:outline-none`}
                     onClick={(e) => {
                         e.stopPropagation();
                         onClose(window.id, e);
@@ -60,17 +110,12 @@ export const Window: React.FC<WindowProps> = ({
                     onMouseDown={(e) => e.stopPropagation()}
                     aria-label="Close"
                 >
-                    {isHoveringControls && (
-                        <IoClose className="text-black/60" style={{ width: iconSize, height: iconSize }} />
-                    )}
+                    <CloseIcon />
                 </button>
+
+                {/* Minimize (Yellow) */}
                 <button
-                    className={`${buttonSize} rounded-full flex items-center justify-center transition-all duration-150 border
-                        ${!isActive && !isHoveringControls
-                            ? isDark ? 'bg-[#4a4a4a] border-[#3a3a3a]' : 'bg-[#d1d1d1] border-[#c1c1c1]'
-                            : 'bg-[#FFBD2E] border-[#DEA123] hover:bg-[#FFB000]'
-                        }
-                    `}
+                    className={`${buttonSize} rounded-full flex items-center justify-center transition-all duration-150 border bg-[#FEBC2E] border-[#D3A125] active:bg-[#C69424] focus:outline-none`}
                     onClick={(e) => {
                         e.stopPropagation();
                         onMinimize(window.id, e);
@@ -78,340 +123,180 @@ export const Window: React.FC<WindowProps> = ({
                     onMouseDown={(e) => e.stopPropagation()}
                     aria-label="Minimize"
                 >
-                    {isHoveringControls && (
-                        <IoRemove className="text-black/60" style={{ width: iconSize, height: iconSize }} />
-                    )}
+                    <MinimizeIcon />
                 </button>
+
+                {/* Zoom/Maximize (Green) */}
                 <button
-                    className={`${buttonSize} rounded-full flex items-center justify-center transition-all duration-150 border
-                        ${!isActive && !isHoveringControls
-                            ? isDark ? 'bg-[#4a4a4a] border-[#3a3a3a]' : 'bg-[#d1d1d1] border-[#c1c1c1]'
-                            : isCalculator
-                                ? 'bg-[#4a4a4a] border-[#3a3a3a]' // Disabled for Calculator
-                                : 'bg-[#28C940] border-[#1AAB29] hover:bg-[#1DB954]'
-                        }
-                    `}
+                    className={`${buttonSize} rounded-full flex items-center justify-center transition-all duration-150 border 
+                        ${isCalculator ? 'bg-[#28C840] border-[#1AAB29] opacity-50 cursor-default' : 'bg-[#28C840] border-[#1AAB29] active:bg-[#1D9730]'} focus:outline-none`}
                     onClick={(e) => {
                         e.stopPropagation();
-                        if (isCalculator) return; // Calculator has fixed size
+                        if (isCalculator) return;
                         onMaximize(window.id, e);
                     }}
                     onMouseDown={(e) => e.stopPropagation()}
-                    aria-label={window.isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
+                    aria-label="Maximize"
                     disabled={isCalculator}
                 >
-                    {isHoveringControls && !isCalculator && (
-                        window.isFullscreen
-                            ? <IoContract className="text-black/60" style={{ width: iconSize, height: iconSize }} />
-                            : <IoExpand className="text-black/60" style={{ width: iconSize, height: iconSize }} />
-                    )}
+                    <GreenButtonIcon />
                 </button>
             </div>
         );
     };
 
-    // For Finder windows - render with integrated traffic lights (Tahoe style)
-    if (isFinder) {
-        return (
-            <div
-                className="absolute flex flex-col overflow-hidden rounded-xl"
-                style={{
-                    left: window.isFullscreen ? 4 : `${window.position.x}px`,
-                    top: window.isFullscreen ? '32px' : `${window.position.y}px`,
-                    width: window.isFullscreen ? 'calc(100% - 8px)' : `${window.size.width}px`,
-                    height: window.isFullscreen ? 'calc(100vh - 32px - 84px)' : `${window.size.height}px`,
-                    zIndex: window.zIndex,
-                    boxShadow: isActive
-                        ? '0 25px 50px -12px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(0, 0, 0, 0.1)'
-                        : '0 10px 40px -10px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(0, 0, 0, 0.05)',
-                }}
-                onMouseDown={() => onFocus(window.id)}
-            >
-                {/* Finder Content - Finder handles its own layout */}
-                <div className="flex-1 overflow-hidden relative">
-                    {window.content}
-                </div>
+    // --- Unified Window Rendering Logic ---
 
-                {/* Draggable area - covers sidebar top and main content top */}
-                <div
-                    className="absolute top-0 left-0 right-0 h-[52px] cursor-grab active:cursor-grabbing z-40"
-                    onMouseDown={(e) => {
-                        e.preventDefault();
-                        onDragStart(window.id, e);
-                    }}
-                    onDoubleClick={(e) => onMaximize(window.id, e)}
-                />
+    // 1. Determine Window Characteristics
+    const isSpecialWindow = window.title === 'About This Mac';
+    const isStickyNotes = false; // Deprecated window type logic
+    const hasIntegratedTitleBar = isFinder || isBrowser || isPreview || isTextEdit || isSpecialWindow;
 
-                {/* Traffic Lights - Positioned in sidebar area, higher z-index to be clickable */}
-                <div className="absolute top-[17px] left-[18px] z-[60]">
-                    <TrafficLights size="large" />
-                </div>
+    // 2. Determine Styles
+    const getWindowClasses = () => {
+        const baseClasses = "absolute flex flex-col overflow-hidden rounded-xl transition-shadow duration-200";
 
-                {/* Resize Handles */}
-                {!window.isFullscreen && (
-                    <>
-                        <div className="absolute top-0 left-2 right-2 h-1 cursor-ns-resize z-20" onMouseDown={(e) => onResizeStart(window.id, e, 'n')} />
-                        <div className="absolute bottom-0 left-2 right-2 h-1 cursor-ns-resize z-20" onMouseDown={(e) => onResizeStart(window.id, e, 's')} />
-                        <div className="absolute left-0 top-2 bottom-2 w-1 cursor-ew-resize z-20" onMouseDown={(e) => onResizeStart(window.id, e, 'w')} />
-                        <div className="absolute right-0 top-2 bottom-2 w-1 cursor-ew-resize z-20" onMouseDown={(e) => onResizeStart(window.id, e, 'e')} />
-                        <div className="absolute top-0 left-0 w-3 h-3 cursor-nwse-resize z-20" onMouseDown={(e) => onResizeStart(window.id, e, 'nw')} />
-                        <div className="absolute top-0 right-0 w-3 h-3 cursor-nesw-resize z-20" onMouseDown={(e) => onResizeStart(window.id, e, 'ne')} />
-                        <div className="absolute bottom-0 left-0 w-3 h-3 cursor-nesw-resize z-20" onMouseDown={(e) => onResizeStart(window.id, e, 'sw')} />
-                        <div className="absolute bottom-0 right-0 w-3 h-3 cursor-nwse-resize z-20" onMouseDown={(e) => onResizeStart(window.id, e, 'se')} />
-                    </>
-                )}
-            </div>
-        );
-    }
+        // Special case: About This Mac (custom styling handled purely by props/inner content interaction, but we apply frame here)
+        if (isSpecialWindow) {
+            // For About This Mac: No background on container (inner has it), specific borders/shadows
+            return `${baseClasses} border border-white/20 shadow-2xl ring-1 ring-black/10`;
+        }
 
-    // For Browser windows - render with integrated traffic lights in toolbar (Safari style)
-    if (isBrowser) {
-        return (
-            <div
-                className="absolute flex flex-col overflow-hidden rounded-xl"
-                style={{
-                    left: window.isFullscreen ? 4 : `${window.position.x}px`,
-                    top: window.isFullscreen ? '32px' : `${window.position.y}px`,
-                    width: window.isFullscreen ? 'calc(100% - 8px)' : `${window.size.width}px`,
-                    height: window.isFullscreen ? 'calc(100vh - 32px - 84px)' : `${window.size.height}px`,
-                    zIndex: window.zIndex,
-                    boxShadow: isActive
-                        ? '0 25px 50px -12px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(0, 0, 0, 0.1)'
-                        : '0 10px 40px -10px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(0, 0, 0, 0.05)',
-                }}
-                onMouseDown={() => onFocus(window.id)}
-            >
-                {/* Browser Content - Browser handles its own layout with traffic lights */}
-                <div className="flex-1 overflow-hidden relative">
-                    {window.content}
-                </div>
+        // Special case: Sticky Notes
+        if (isStickyNotes) {
+            return `${baseClasses} shadow-xl`;
+        }
 
-                {/* Draggable area - covers toolbar area */}
-                <div
-                    className="absolute top-0 left-0 right-0 h-[52px] cursor-grab active:cursor-grabbing z-40"
-                    onMouseDown={(e) => {
-                        e.preventDefault();
-                        onDragStart(window.id, e);
-                    }}
-                    onDoubleClick={(e) => onMaximize(window.id, e)}
-                />
+        // Standard Apps (Finder, Browser, etc)
+        const bgClass = (() => {
+            if (isTerminal) return 'bg-[#1e1e1e]';
+            if (isCalculator) return 'bg-[#1c1c1c]';
+            if (isDark) return isActive ? 'bg-[#292929]' : 'bg-[#323232]';
+            return isActive ? 'bg-[#f6f6f6]' : 'bg-[#e8e8e8]';
+        })();
 
-                {/* Traffic Lights - Positioned in toolbar area, higher z-index to be clickable */}
-                <div className="absolute top-[18px] left-[14px] z-[60]">
-                    <TrafficLights />
-                </div>
+        const textClass = (isTerminal || isCalculator || isDark) ? 'text-white' : 'text-black';
+        const borderClass = (isTerminal || isCalculator || isDark) ? 'border border-white/10' : 'border border-black/10';
 
-                {/* Resize Handles */}
-                {!window.isFullscreen && (
-                    <>
-                        <div className="absolute top-0 left-2 right-2 h-1 cursor-ns-resize z-20" onMouseDown={(e) => onResizeStart(window.id, e, 'n')} />
-                        <div className="absolute bottom-0 left-2 right-2 h-1 cursor-ns-resize z-20" onMouseDown={(e) => onResizeStart(window.id, e, 's')} />
-                        <div className="absolute left-0 top-2 bottom-2 w-1 cursor-ew-resize z-20" onMouseDown={(e) => onResizeStart(window.id, e, 'w')} />
-                        <div className="absolute right-0 top-2 bottom-2 w-1 cursor-ew-resize z-20" onMouseDown={(e) => onResizeStart(window.id, e, 'e')} />
-                        <div className="absolute top-0 left-0 w-3 h-3 cursor-nwse-resize z-20" onMouseDown={(e) => onResizeStart(window.id, e, 'nw')} />
-                        <div className="absolute top-0 right-0 w-3 h-3 cursor-nesw-resize z-20" onMouseDown={(e) => onResizeStart(window.id, e, 'ne')} />
-                        <div className="absolute bottom-0 left-0 w-3 h-3 cursor-nesw-resize z-20" onMouseDown={(e) => onResizeStart(window.id, e, 'sw')} />
-                        <div className="absolute bottom-0 right-0 w-3 h-3 cursor-nwse-resize z-20" onMouseDown={(e) => onResizeStart(window.id, e, 'se')} />
-                    </>
-                )}
-            </div>
-        );
-    }
-
-    // For Preview windows - render with integrated traffic lights in toolbar (macOS Preview style)
-    if (isPreview) {
-        return (
-            <div
-                className="absolute flex flex-col overflow-hidden rounded-xl border border-black/10"
-                style={{
-                    left: window.isFullscreen ? 4 : `${window.position.x}px`,
-                    top: window.isFullscreen ? '32px' : `${window.position.y}px`,
-                    width: window.isFullscreen ? 'calc(100% - 8px)' : `${window.size.width}px`,
-                    height: window.isFullscreen ? 'calc(100vh - 32px - 84px)' : `${window.size.height}px`,
-                    zIndex: window.zIndex,
-                    boxShadow: isActive
-                        ? '0 25px 50px -12px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(0, 0, 0, 0.1)'
-                        : '0 10px 40px -10px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(0, 0, 0, 0.05)',
-                }}
-                onMouseDown={() => onFocus(window.id)}
-            >
-                {/* Draggable toolbar area - only the center portion between traffic lights and buttons */}
-                <div
-                    className="absolute top-0 left-[72px] right-[180px] h-12 cursor-grab active:cursor-grabbing z-[100]"
-                    onMouseDown={(e) => {
-                        e.preventDefault();
-                        onDragStart(window.id, e);
-                    }}
-                    onDoubleClick={(e) => onMaximize(window.id, e)}
-                />
-
-                {/* Preview Content - Preview handles its own layout */}
-                <div className="flex-1 overflow-hidden relative">
-                    {window.content}
-                </div>
-
-                {/* Traffic Lights - Positioned in toolbar area */}
-                <div className="absolute top-[15px] left-[14px] z-[60]">
-                    <TrafficLights />
-                </div>
-
-                {/* Resize Handles */}
-                {!window.isFullscreen && (
-                    <>
-                        <div className="absolute top-0 left-2 right-2 h-1 cursor-ns-resize z-20" onMouseDown={(e) => onResizeStart(window.id, e, 'n')} />
-                        <div className="absolute bottom-0 left-2 right-2 h-1 cursor-ns-resize z-20" onMouseDown={(e) => onResizeStart(window.id, e, 's')} />
-                        <div className="absolute left-0 top-2 bottom-2 w-1 cursor-ew-resize z-20" onMouseDown={(e) => onResizeStart(window.id, e, 'w')} />
-                        <div className="absolute right-0 top-2 bottom-2 w-1 cursor-ew-resize z-20" onMouseDown={(e) => onResizeStart(window.id, e, 'e')} />
-                        <div className="absolute top-0 left-0 w-3 h-3 cursor-nwse-resize z-20" onMouseDown={(e) => onResizeStart(window.id, e, 'nw')} />
-                        <div className="absolute top-0 right-0 w-3 h-3 cursor-nesw-resize z-20" onMouseDown={(e) => onResizeStart(window.id, e, 'ne')} />
-                        <div className="absolute bottom-0 left-0 w-3 h-3 cursor-nesw-resize z-20" onMouseDown={(e) => onResizeStart(window.id, e, 'sw')} />
-                        <div className="absolute bottom-0 right-0 w-3 h-3 cursor-nwse-resize z-20" onMouseDown={(e) => onResizeStart(window.id, e, 'se')} />
-                    </>
-                )}
-            </div>
-        );
-    }
-
-    // For TextEdit windows - render with its own custom title bar (macOS TextEdit style)
-    // TextEdit handles its own traffic lights, title bar, and styling
-    if (isTextEdit) {
-        return (
-            <div
-                className="absolute flex flex-col overflow-hidden"
-                style={{
-                    left: window.isFullscreen ? 4 : `${window.position.x}px`,
-                    top: window.isFullscreen ? '32px' : `${window.position.y}px`,
-                    width: window.isFullscreen ? 'calc(100% - 8px)' : `${window.size.width}px`,
-                    height: window.isFullscreen ? 'calc(100vh - 32px - 84px)' : `${window.size.height}px`,
-                    zIndex: window.zIndex,
-                    boxShadow: isActive
-                        ? '0 25px 50px -12px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(0, 0, 0, 0.1)'
-                        : '0 10px 40px -10px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(0, 0, 0, 0.05)',
-                }}
-                onMouseDown={() => onFocus(window.id)}
-            >
-                {/* TextEdit Content - TextEdit handles its own layout with custom title bar and traffic lights */}
-                <div className="flex-1 overflow-hidden relative">
-                    {window.content}
-                </div>
-
-                {/* Draggable area - covers title bar area, but allows traffic lights clicks through */}
-                <div
-                    className="absolute top-0 left-[72px] right-0 h-12 cursor-grab active:cursor-grabbing z-40"
-                    onMouseDown={(e) => {
-                        e.preventDefault();
-                        onDragStart(window.id, e);
-                    }}
-                    onDoubleClick={(e) => onMaximize(window.id, e)}
-                />
-
-                {/* Resize Handles */}
-                {!window.isFullscreen && (
-                    <>
-                        <div className="absolute top-0 left-2 right-2 h-1 cursor-ns-resize z-20" onMouseDown={(e) => onResizeStart(window.id, e, 'n')} />
-                        <div className="absolute bottom-0 left-2 right-2 h-1 cursor-ns-resize z-20" onMouseDown={(e) => onResizeStart(window.id, e, 's')} />
-                        <div className="absolute left-0 top-2 bottom-2 w-1 cursor-ew-resize z-20" onMouseDown={(e) => onResizeStart(window.id, e, 'w')} />
-                        <div className="absolute right-0 top-2 bottom-2 w-1 cursor-ew-resize z-20" onMouseDown={(e) => onResizeStart(window.id, e, 'e')} />
-                        <div className="absolute top-0 left-0 w-3 h-3 cursor-nwse-resize z-20" onMouseDown={(e) => onResizeStart(window.id, e, 'nw')} />
-                        <div className="absolute top-0 right-0 w-3 h-3 cursor-nesw-resize z-20" onMouseDown={(e) => onResizeStart(window.id, e, 'ne')} />
-                        <div className="absolute bottom-0 left-0 w-3 h-3 cursor-nesw-resize z-20" onMouseDown={(e) => onResizeStart(window.id, e, 'sw')} />
-                        <div className="absolute bottom-0 right-0 w-3 h-3 cursor-nwse-resize z-20" onMouseDown={(e) => onResizeStart(window.id, e, 'se')} />
-                    </>
-                )}
-            </div>
-        );
-    }
-
-    // Default window styling for other apps
-    const getWindowBackground = () => {
-        if (isTerminal) return 'bg-[#1e1e1e]';
-        if (isCalculator) return 'bg-[#1c1c1c]';
-        if (isDark) return isActive ? 'bg-[#292929]' : 'bg-[#323232]';
-        return isActive ? 'bg-[#f6f6f6]' : 'bg-[#e8e8e8]';
+        return `${baseClasses} ${bgClass} ${textClass} ${borderClass}`;
     };
 
-    const getTitleBarBackground = () => {
-        if (isTerminal) return 'bg-[#323232]';
-        if (isCalculator) return 'bg-[#1c1c1c]';
-        if (isDark) return isActive ? 'bg-[#3d3d3d]' : 'bg-[#404040]';
-        return isActive ? 'bg-[#e8e8e8]' : 'bg-[#dcdcdc]';
+    const getWindowStyle = () => {
+        const baseStyle = {
+            left: window.isFullscreen ? 4 : `${window.position.x}px`,
+            top: window.isFullscreen ? '32px' : `${window.position.y}px`,
+            width: window.isFullscreen ? 'calc(100% - 8px)' : `${window.size.width}px`,
+            height: window.isFullscreen ? 'calc(100vh - 32px - 84px)' : `${window.size.height}px`,
+            zIndex: window.zIndex,
+        };
+
+        if (isSpecialWindow || isStickyNotes) {
+            // Special styling overrides if needed, but standard position/size logic applies.
+            // About This Mac prevents fullscreen usually, but we handle that via inputs.
+            return {
+                ...baseStyle,
+                // Ensure transparent bg so inner glass component works
+                background: 'transparent'
+            };
+        }
+
+        return {
+            ...baseStyle,
+            boxShadow: isActive
+                ? '0 22px 70px 4px rgba(0, 0, 0, 0.35), 0 0 0 0.5px rgba(0, 0, 0, 0.15)'
+                : '0 8px 30px 2px rgba(0, 0, 0, 0.2), 0 0 0 0.5px rgba(0, 0, 0, 0.1)',
+        };
     };
 
-    // Check if window needs dark text styling
-    const needsDarkWindowStyle = isTerminal || isCalculator;
+    // 3. Determine Traffic Light Position
+    const getTrafficLightPosition = () => {
+        if (isSpecialWindow || isStickyNotes) return "top-[13px] left-[13px]";
+        // Integrated title bars (Finder, Browser, etc)
+        if (hasIntegratedTitleBar) return "top-[18px] left-[20px]";
+        // Standard title bars - relative div handling, this is absolute fallback if needed
+        return "top-[18px] left-[20px]";
+    };
 
     return (
         <div
-            className={`absolute flex flex-col overflow-hidden rounded-[10px]
-                ${getWindowBackground()}
-                ${needsDarkWindowStyle ? 'text-white' : isDark ? 'text-white' : 'text-black'}
-                ${needsDarkWindowStyle || isDark ? 'border border-white/10' : 'border border-black/10'}
-            `}
-            style={{
-                left: window.isFullscreen ? 4 : `${window.position.x}px`,
-                top: window.isFullscreen ? '32px' : `${window.position.y}px`,
-                width: window.isFullscreen ? 'calc(100% - 8px)' : `${window.size.width}px`,
-                height: window.isFullscreen ? 'calc(100vh - 32px - 84px)' : `${window.size.height}px`,
-                zIndex: window.zIndex,
-                boxShadow: isActive
-                    ? '0 22px 70px 4px rgba(0, 0, 0, 0.35), 0 0 0 0.5px rgba(0, 0, 0, 0.15)'
-                    : '0 8px 30px 2px rgba(0, 0, 0, 0.2), 0 0 0 0.5px rgba(0, 0, 0, 0.1)',
-            }}
+            className={getWindowClasses()}
+            style={getWindowStyle()}
             onMouseDown={() => onFocus(window.id)}
         >
-            {/* Title Bar */}
-            <div
-                className={`h-[52px] flex items-center px-4 select-none relative w-full flex-shrink-0
-                    ${getTitleBarBackground()}
-                    ${!needsDarkWindowStyle && (isDark
-                        ? 'border-b border-white/10'
-                        : 'border-b border-black/10'
-                    )}
-                `}
-                onMouseDown={(e) => {
-                    if ((e.target as HTMLElement).closest('.traffic-lights')) return;
-                    e.preventDefault();
-                    onDragStart(window.id, e);
-                }}
-                onDoubleClick={(e) => {
-                    if ((e.target as HTMLElement).closest('.traffic-lights')) return;
-                    if (isCalculator) return; // Calculator has fixed size
-                    onMaximize(window.id, e);
-                }}
-            >
-                <TrafficLights />
+            {/* A) Integrated Title Bar (Overlay Traffic Lights + Drag Area) */}
+            {hasIntegratedTitleBar && (
+                <>
+                    {/* Draggable Area */}
+                    <div
+                        className={`absolute top-0 left-0 right-0 z-40 cursor-grab active:cursor-grabbing
+                            ${(isSpecialWindow || isStickyNotes) ? 'h-10' : 'h-[52px]'}
+                            ${isPreview ? 'left-[72px] right-[180px]' : '' /* Preview special drag area to preserve toolbar space */}
+                        `}
+                        onMouseDown={(e) => {
+                            e.preventDefault();
+                            onDragStart(window.id, e);
+                        }}
+                        onDoubleClick={(e) => {
+                            if (!isSpecialWindow) onMaximize(window.id, e);
+                        }}
+                    />
 
-                {/* Window Title - centered */}
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                    <span className={`text-[13px] font-medium truncate max-w-[60%]
-                        ${needsDarkWindowStyle
-                            ? 'text-gray-300'
-                            : isDark
-                                ? (isActive ? 'text-gray-200' : 'text-gray-400')
-                                : (isActive ? 'text-gray-700' : 'text-gray-400')
-                        }
+                    {/* Traffic Lights Overlay */}
+                    <div className={`absolute z-[60] ${getTrafficLightPosition()}`}>
+                        <TrafficLights size={isFinder ? "large" : "normal"} />
+                    </div>
+                </>
+            )}
+
+            {/* B) Standard Title Bar (Flex container with lights inside) */}
+            {!hasIntegratedTitleBar && (
+                <div
+                    className={`h-[52px] flex items-center px-4 select-none relative w-full flex-shrink-0
+                        ${(() => {
+                            if (isTerminal) return 'bg-[#323232]';
+                            if (isCalculator) return 'bg-[#1c1c1c]';
+                            if (isDark) return isActive ? 'bg-[#3d3d3d]' : 'bg-[#404040]';
+                            return isActive ? 'bg-[#e8e8e8]' : 'bg-[#dcdcdc]';
+                        })()}
+                        ${(!(isTerminal || isCalculator) && (isDark ? 'border-b border-white/10' : 'border-b border-black/10'))}
+                    `}
+                    onMouseDown={(e) => {
+                        if ((e.target as HTMLElement).closest('.traffic-lights')) return;
+                        e.preventDefault();
+                        onDragStart(window.id, e);
+                    }}
+                    onDoubleClick={(e) => {
+                        if ((e.target as HTMLElement).closest('.traffic-lights')) return;
+                        if (isCalculator) return;
+                        onMaximize(window.id, e);
+                    }}
+                >
+                    <TrafficLights />
+                    {/* Title Text */}
+                    <span className={`ml-4 text-[13px] font-semibold flex-1 text-center -translate-x-6
+                        ${isDark || isTerminal || isCalculator ? 'text-gray-300' : 'text-gray-600'}
                     `}>
                         {window.title}
                     </span>
                 </div>
-            </div>
+            )}
 
-            {/* Window Content */}
-            <div className="flex-1 overflow-hidden relative flex flex-col min-h-0">
+            {/* C) Content Area */}
+            <div className={`flex-1 overflow-hidden relative ${isSpecialWindow ? 'rounded-xl' : ''}`}>
                 {window.content}
             </div>
 
-            {/* Resize Handles - disabled for Calculator (fixed size) */}
+            {/* D) Resize Handles (Only if not fullscreen and not fixed size like Calculator) */}
             {!window.isFullscreen && !isCalculator && (
                 <>
-                    <div className="absolute top-0 left-2 right-2 h-1 cursor-ns-resize" onMouseDown={(e) => onResizeStart(window.id, e, 'n')} />
-                    <div className="absolute bottom-0 left-2 right-2 h-1 cursor-ns-resize" onMouseDown={(e) => onResizeStart(window.id, e, 's')} />
-                    <div className="absolute left-0 top-2 bottom-2 w-1 cursor-ew-resize" onMouseDown={(e) => onResizeStart(window.id, e, 'w')} />
-                    <div className="absolute right-0 top-2 bottom-2 w-1 cursor-ew-resize" onMouseDown={(e) => onResizeStart(window.id, e, 'e')} />
-                    <div className="absolute top-0 left-0 w-3 h-3 cursor-nwse-resize" onMouseDown={(e) => onResizeStart(window.id, e, 'nw')} />
-                    <div className="absolute top-0 right-0 w-3 h-3 cursor-nesw-resize" onMouseDown={(e) => onResizeStart(window.id, e, 'ne')} />
-                    <div className="absolute bottom-0 left-0 w-3 h-3 cursor-nesw-resize" onMouseDown={(e) => onResizeStart(window.id, e, 'sw')} />
-                    <div className="absolute bottom-0 right-0 w-3 h-3 cursor-nwse-resize" onMouseDown={(e) => onResizeStart(window.id, e, 'se')} />
+                    <div className="absolute top-0 left-2 right-2 h-1 cursor-ns-resize z-20" onMouseDown={(e) => onResizeStart(window.id, e, 'n')} />
+                    <div className="absolute bottom-0 left-2 right-2 h-1 cursor-ns-resize z-20" onMouseDown={(e) => onResizeStart(window.id, e, 's')} />
+                    <div className="absolute left-0 top-2 bottom-2 w-1 cursor-ew-resize z-20" onMouseDown={(e) => onResizeStart(window.id, e, 'w')} />
+                    <div className="absolute right-0 top-2 bottom-2 w-1 cursor-ew-resize z-20" onMouseDown={(e) => onResizeStart(window.id, e, 'e')} />
+                    <div className="absolute top-0 left-0 w-3 h-3 cursor-nwse-resize z-20" onMouseDown={(e) => onResizeStart(window.id, e, 'nw')} />
+                    <div className="absolute top-0 right-0 w-3 h-3 cursor-nesw-resize z-20" onMouseDown={(e) => onResizeStart(window.id, e, 'ne')} />
+                    <div className="absolute bottom-0 left-0 w-3 h-3 cursor-nesw-resize z-20" onMouseDown={(e) => onResizeStart(window.id, e, 'sw')} />
+                    <div className="absolute bottom-0 right-0 w-3 h-3 cursor-nwse-resize z-20" onMouseDown={(e) => onResizeStart(window.id, e, 'se')} />
                 </>
             )}
         </div>

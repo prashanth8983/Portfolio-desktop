@@ -1,373 +1,409 @@
-import React, { useState, useEffect } from 'react';
-import { FaChartLine, FaEye, FaGlobe, FaClock, FaDesktop, FaMobile } from 'react-icons/fa';
+import React, { useState, useEffect, useMemo } from 'react';
+import { useTheme } from '../contexts/ThemeContext';
+import { useProcesses, AppProcess } from '../contexts/ProcessContext';
+import {
+  FaMicrochip, FaCube,
+  FaStopCircle
+} from 'react-icons/fa';
+import {
+  MagnifyingGlassIcon,
+  InfoCircledIcon,
+  DotsHorizontalIcon,
+  ChevronDownIcon,
+  ActivityLogIcon
+} from '@radix-ui/react-icons';
+import { getIconUrl } from '../utils/icons';
 
-interface ProcessInfo {
-  name: string;
-  cpu: number;
-  memory: number;
-  status: 'running' | 'idle';
-}
+type Tab = 'CPU' | 'Memory' | 'Energy' | 'Disk' | 'Network';
 
-interface VisitStats {
-  totalVisits: number;
-  uniqueVisitors: number;
-  avgSessionTime: string;
-  bounceRate: number;
-  desktopUsers: number;
-  mobileUsers: number;
-}
+// Icon mapping for processes
+const getProcessIcon = (process: AppProcess): React.ReactNode => {
+  const iconMap: Record<string, React.ReactNode> = {
+    'Safari': <img src={getIconUrl('safari')} alt="" className="w-4 h-4 object-contain" />,
+    'Finder': <img src={getIconUrl('finder')} alt="" className="w-4 h-4 object-contain" />,
+    'Terminal': <img src={getIconUrl('terminal')} alt="" className="w-4 h-4 object-contain" />,
+    'Mail': <img src={getIconUrl('mail')} alt="" className="w-4 h-4 object-contain" />,
+    'Photos': <img src={getIconUrl('photos')} alt="" className="w-4 h-4 object-contain" />,
+    'Calculator': <img src={getIconUrl('calculator')} alt="" className="w-4 h-4 object-contain" />,
+    'Activity Monitor': <ActivityLogIcon className="w-4 h-4 text-green-500" />,
+    'TextEdit': <span className="w-4 h-4 flex items-center justify-center text-xs">📝</span>,
+    'System Settings': <img src={getIconUrl('system-settings')} alt="" className="w-4 h-4 object-contain" />,
+    'Preview': <span className="w-4 h-4 flex items-center justify-center text-xs">📄</span>,
+    'Music': <span className="w-4 h-4 flex items-center justify-center text-xs">🎵</span>,
+    'Calendar': <img src={getIconUrl('calendar')} alt="" className="w-4 h-4 object-contain" />,
+    'Bin': <img src={getIconUrl('bin')} alt="" className="w-4 h-4 object-contain" />,
+  };
+
+  if (iconMap[process.name]) {
+    return iconMap[process.name];
+  }
+
+  // System process icons
+  if (process.type === 'system') {
+    if (process.name === 'kernel_task') return <FaMicrochip className="w-3.5 h-3.5 text-gray-400" />;
+    if (process.name === 'WindowServer') return <FaCube className="w-3.5 h-3.5 text-blue-400" />;
+    if (process.name === 'Dock') return <span className="w-3.5 h-3.5 bg-gray-500 rounded block" />;
+    return <span className="w-3.5 h-3.5 bg-gray-400 rounded-sm block opacity-60" />;
+  }
+
+  if (process.type === 'background') {
+    if (process.name === 'Spotlight') return <MagnifyingGlassIcon className="w-3.5 h-3.5 text-blue-400" />;
+    return <span className="w-3.5 h-3.5 bg-gray-500 rounded-full block opacity-50" />;
+  }
+
+  // Default user app icon
+  return <span className="w-3.5 h-3.5 bg-blue-500 rounded block" />;
+};
+
+// Format memory for display
+const formatMemory = (mb: number): string => {
+  if (mb >= 1024) {
+    return `${(mb / 1024).toFixed(1)} GB`;
+  }
+  return `${mb.toFixed(1)} MB`;
+};
+
+// Get user for process
+const getProcessUser = (process: AppProcess): string => {
+  if (process.type === 'system') {
+    if (process.name === 'kernel_task' || process.name === 'launchd') return 'root';
+    if (process.name === 'WindowServer') return '_windowserver';
+    return 'root';
+  }
+  return 'User';
+};
 
 export const ActivityMonitor: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'processes' | 'stats' | 'performance'>('stats');
-  const [stats, setStats] = useState<VisitStats>({
-    totalVisits: 0,
-    uniqueVisitors: 0,
-    avgSessionTime: '0:00',
-    bounceRate: 0,
-    desktopUsers: 0,
-    mobileUsers: 0,
-  });
+  const { isDark } = useTheme();
+  const { processes } = useProcesses();
+  const [activeTab, setActiveTab] = useState<Tab>('CPU');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedPid, setSelectedPid] = useState<number | null>(null);
+  const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'cpu', direction: 'desc' });
 
-  const [processes] = useState<ProcessInfo[]>([
-    { name: 'Browser.app', cpu: 12.5, memory: 256, status: 'running' },
-    { name: 'Terminal.app', cpu: 3.2, memory: 128, status: 'running' },
-    { name: 'Mail.app', cpu: 1.8, memory: 94, status: 'running' },
-    { name: 'Music.app', cpu: 5.4, memory: 186, status: 'running' },
-    { name: 'TextEdit.app', cpu: 0.9, memory: 64, status: 'running' },
-    { name: 'Calculator.app', cpu: 0.3, memory: 32, status: 'idle' },
-    { name: 'Photos.app', cpu: 2.1, memory: 142, status: 'running' },
-    { name: 'ProjectViewer.app', cpu: 4.6, memory: 178, status: 'running' },
-    { name: 'Finder', cpu: 8.7, memory: 212, status: 'running' },
-    { name: 'WindowServer', cpu: 15.3, memory: 324, status: 'running' },
-  ]);
+  // CPU History Graph Data
+  const [cpuHistory, setCpuHistory] = useState<number[]>(new Array(40).fill(10));
 
-  const [cpuHistory, setCpuHistory] = useState<number[]>(Array(20).fill(0));
-  const [memoryHistory, setMemoryHistory] = useState<number[]>(Array(20).fill(0));
-
+  // Update CPU history graph
   useEffect(() => {
-    // Simulate real-time CPU and memory usage
     const interval = setInterval(() => {
-      setCpuHistory((prev) => [...prev.slice(1), Math.random() * 40 + 20]);
-      setMemoryHistory((prev) => [...prev.slice(1), Math.random() * 30 + 50]);
-    }, 2000);
-
-    return () => clearInterval(interval);
-  }, []);
-
-  useEffect(() => {
-    // Simulate loading visitor stats from localStorage or analytics
-    const sessionStart = Date.now();
-    const isReturningVisitor = localStorage.getItem('portfolio_visited') === 'true';
-
-    // Increment visit count
-    const totalVisits = parseInt(localStorage.getItem('portfolio_total_visits') || '0') + 1;
-    const uniqueVisitors = parseInt(localStorage.getItem('portfolio_unique_visitors') || '0') + (isReturningVisitor ? 0 : 1);
-
-    localStorage.setItem('portfolio_visited', 'true');
-    localStorage.setItem('portfolio_total_visits', totalVisits.toString());
-    localStorage.setItem('portfolio_unique_visitors', uniqueVisitors.toString());
-
-    const isMobile = window.innerWidth < 768;
-    const desktopUsers = parseInt(localStorage.getItem('portfolio_desktop_users') || '0') + (isMobile ? 0 : 1);
-    const mobileUsers = parseInt(localStorage.getItem('portfolio_mobile_users') || '0') + (isMobile ? 1 : 0);
-
-    if (!isMobile) {
-      localStorage.setItem('portfolio_desktop_users', desktopUsers.toString());
-    } else {
-      localStorage.setItem('portfolio_mobile_users', mobileUsers.toString());
-    }
-
-    setStats({
-      totalVisits,
-      uniqueVisitors,
-      avgSessionTime: '2:34',
-      bounceRate: 32,
-      desktopUsers,
-      mobileUsers,
-    });
-
-    // Track session time
-    const sessionInterval = setInterval(() => {
-      const sessionTime = Math.floor((Date.now() - sessionStart) / 1000);
-      const minutes = Math.floor(sessionTime / 60);
-      const seconds = sessionTime % 60;
-      setStats((prev) => ({
-        ...prev,
-        avgSessionTime: `${minutes}:${seconds.toString().padStart(2, '0')}`,
-      }));
+      const totalCpu = processes.reduce((sum, p) => sum + p.cpu, 0);
+      const normalizedCpu = Math.min(100, totalCpu / 2); // Normalize for display
+      setCpuHistory(prev => [...prev.slice(1), normalizedCpu]);
     }, 1000);
 
-    return () => clearInterval(sessionInterval);
-  }, []);
+    return () => clearInterval(interval);
+  }, [processes]);
 
-  const renderStatsTab = () => (
-    <div className="p-4 space-y-4 bg-gray-50">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-        <div className="bg-gradient-to-br from-blue-500 to-blue-600 p-5 rounded-lg text-white shadow-sm">
-          <div className="flex items-center justify-between mb-2">
-            <FaEye size={28} className="opacity-80" />
-            <span className="text-3xl font-bold">{stats.totalVisits}</span>
-          </div>
-          <div className="text-sm opacity-90">Total Visits</div>
-        </div>
+  // Calculate totals
+  const totals = useMemo(() => {
+    const systemCpu = processes.filter(p => p.type === 'system').reduce((sum, p) => sum + p.cpu, 0);
+    const userCpu = processes.filter(p => p.type === 'user').reduce((sum, p) => sum + p.cpu, 0);
+    const totalCpu = processes.reduce((sum, p) => sum + p.cpu, 0);
+    const totalMemory = processes.reduce((sum, p) => sum + p.memory, 0);
+    const threadCount = processes.length * 4 + Math.floor(Math.random() * 50); // Simulated thread count
 
-        <div className="bg-gradient-to-br from-purple-500 to-purple-600 p-5 rounded-lg text-white shadow-sm">
-          <div className="flex items-center justify-between mb-2">
-            <FaGlobe size={32} className="opacity-80" />
-            <span className="text-3xl font-bold">{stats.uniqueVisitors}</span>
-          </div>
-          <div className="text-sm opacity-90">Unique Visitors</div>
-        </div>
+    return {
+      systemCpu: systemCpu.toFixed(2),
+      userCpu: userCpu.toFixed(2),
+      idleCpu: Math.max(0, 100 - totalCpu).toFixed(2),
+      totalMemory: formatMemory(totalMemory),
+      threads: threadCount,
+      processCount: processes.length,
+    };
+  }, [processes]);
 
-        <div className="bg-gradient-to-br from-green-500 to-green-600 p-5 rounded-lg text-white shadow-sm">
-          <div className="flex items-center justify-between mb-2">
-            <FaClock size={28} className="opacity-80" />
-            <span className="text-3xl font-bold">{stats.avgSessionTime}</span>
-          </div>
-          <div className="text-sm opacity-90">Avg Session Time</div>
-        </div>
+  // Sort & Filter Logic
+  const sortedProcesses = useMemo(() => {
+    let sortable = [...processes];
 
-        <div className="bg-gradient-to-br from-orange-500 to-orange-600 p-5 rounded-lg text-white shadow-sm">
-          <div className="flex items-center justify-between mb-2">
-            <FaChartLine size={32} className="opacity-80" />
-            <span className="text-3xl font-bold">{stats.bounceRate}%</span>
-          </div>
-          <div className="text-sm opacity-90">Bounce Rate</div>
-        </div>
+    if (searchQuery) {
+      sortable = sortable.filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase()));
+    }
 
-        <div className="bg-gradient-to-br from-indigo-500 to-indigo-600 p-5 rounded-lg text-white shadow-sm">
-          <div className="flex items-center justify-between mb-2">
-            <FaDesktop size={32} className="opacity-80" />
-            <span className="text-3xl font-bold">{stats.desktopUsers}</span>
-          </div>
-          <div className="text-sm opacity-90">Desktop Users</div>
-        </div>
+    sortable.sort((a, b) => {
+      let aVal: string | number;
+      let bVal: string | number;
 
-        <div className="bg-gradient-to-br from-pink-500 to-pink-600 p-5 rounded-lg text-white shadow-sm">
-          <div className="flex items-center justify-between mb-2">
-            <FaMobile size={32} className="opacity-80" />
-            <span className="text-3xl font-bold">{stats.mobileUsers}</span>
-          </div>
-          <div className="text-sm opacity-90">Mobile Users</div>
-        </div>
-      </div>
+      switch (sortConfig.key) {
+        case 'name':
+          aVal = a.name;
+          bVal = b.name;
+          break;
+        case 'cpu':
+          aVal = a.cpu;
+          bVal = b.cpu;
+          break;
+        case 'memory':
+          aVal = a.memory;
+          bVal = b.memory;
+          break;
+        case 'energy':
+          aVal = a.energy;
+          bVal = b.energy;
+          break;
+        case 'pid':
+          aVal = a.pid;
+          bVal = b.pid;
+          break;
+        case 'user':
+          aVal = getProcessUser(a);
+          bVal = getProcessUser(b);
+          break;
+        default:
+          aVal = a.cpu;
+          bVal = b.cpu;
+      }
 
-      <div className="bg-white p-5 rounded-lg border border-gray-200 shadow-sm">
-        <h3 className="text-base font-semibold text-gray-800 mb-3">Device Distribution</h3>
-        <div className="space-y-3">
-          <div>
-            <div className="flex justify-between text-sm mb-1">
-              <span className="text-gray-600">Desktop</span>
-              <span className="font-medium">
-                {stats.desktopUsers + stats.mobileUsers > 0
-                  ? Math.round((stats.desktopUsers / (stats.desktopUsers + stats.mobileUsers)) * 100)
-                  : 0}%
-              </span>
-            </div>
-            <div className="h-3 bg-gray-200 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-gradient-to-r from-indigo-500 to-indigo-600 transition-all"
-                style={{
-                  width: `${
-                    stats.desktopUsers + stats.mobileUsers > 0
-                      ? (stats.desktopUsers / (stats.desktopUsers + stats.mobileUsers)) * 100
-                      : 0
-                  }%`,
-                }}
-              />
-            </div>
-          </div>
+      if (typeof aVal === 'string' && typeof bVal === 'string') {
+        return sortConfig.direction === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+      }
+      return sortConfig.direction === 'asc' ? (aVal as number) - (bVal as number) : (bVal as number) - (aVal as number);
+    });
 
-          <div>
-            <div className="flex justify-between text-sm mb-1">
-              <span className="text-gray-600">Mobile</span>
-              <span className="font-medium">
-                {stats.desktopUsers + stats.mobileUsers > 0
-                  ? Math.round((stats.mobileUsers / (stats.desktopUsers + stats.mobileUsers)) * 100)
-                  : 0}%
-              </span>
-            </div>
-            <div className="h-3 bg-gray-200 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-gradient-to-r from-pink-500 to-pink-600 transition-all"
-                style={{
-                  width: `${
-                    stats.desktopUsers + stats.mobileUsers > 0
-                      ? (stats.mobileUsers / (stats.desktopUsers + stats.mobileUsers)) * 100
-                      : 0
-                  }%`,
-                }}
-              />
-            </div>
-          </div>
-        </div>
-      </div>
+    return sortable;
+  }, [processes, sortConfig, searchQuery]);
 
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <p className="text-sm text-blue-800">
-          <strong>Note:</strong> This is a demo analytics dashboard using localStorage for tracking.
-          For production, integrate with Google Analytics, Plausible, or your analytics service of choice.
-        </p>
-      </div>
-    </div>
-  );
-
-  const renderProcessesTab = () => (
-    <div className="p-4 bg-gray-50">
-      <div className="bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm">
-        <table className="w-full">
-          <thead className="bg-gray-100 border-b border-gray-200">
-            <tr>
-              <th className="text-left p-3 font-semibold text-gray-700">Process Name</th>
-              <th className="text-right p-3 font-semibold text-gray-700">CPU %</th>
-              <th className="text-right p-3 font-semibold text-gray-700">Memory (MB)</th>
-              <th className="text-center p-3 font-semibold text-gray-700">Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {processes
-              .sort((a, b) => b.cpu - a.cpu)
-              .map((process, index) => (
-                <tr
-                  key={index}
-                  className="border-b border-gray-100 hover:bg-gray-50 transition-colors"
-                >
-                  <td className="p-3 font-medium text-gray-800">{process.name}</td>
-                  <td className="p-3 text-right">
-                    <span
-                      className={`font-semibold ${
-                        process.cpu > 10 ? 'text-red-600' : process.cpu > 5 ? 'text-orange-600' : 'text-green-600'
-                      }`}
-                    >
-                      {process.cpu.toFixed(1)}%
-                    </span>
-                  </td>
-                  <td className="p-3 text-right text-gray-700">{process.memory} MB</td>
-                  <td className="p-3 text-center">
-                    <span
-                      className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        process.status === 'running'
-                          ? 'bg-green-100 text-green-700'
-                          : 'bg-gray-100 text-gray-600'
-                      }`}
-                    >
-                      {process.status}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-          </tbody>
-        </table>
-      </div>
-
-      <div className="mt-4 grid grid-cols-2 gap-4">
-        <div className="bg-white p-4 rounded-lg border border-gray-200">
-          <div className="text-sm text-gray-600 mb-1">Total CPU Usage</div>
-          <div className="text-2xl font-bold text-gray-800">
-            {processes.reduce((sum, p) => sum + p.cpu, 0).toFixed(1)}%
-          </div>
-        </div>
-        <div className="bg-white p-4 rounded-lg border border-gray-200">
-          <div className="text-sm text-gray-600 mb-1">Total Memory</div>
-          <div className="text-2xl font-bold text-gray-800">
-            {(processes.reduce((sum, p) => sum + p.memory, 0) / 1024).toFixed(2)} GB
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-
-  const renderPerformanceTab = () => (
-    <div className="p-4 space-y-4 bg-gray-50">
-      <div className="bg-white p-5 rounded-lg border border-gray-200 shadow-sm">
-        <h3 className="text-base font-semibold text-gray-800 mb-3">CPU Usage History</h3>
-        <div className="h-32 flex items-end gap-1">
-          {cpuHistory.map((value, index) => (
-            <div
-              key={index}
-              className="flex-1 bg-gradient-to-t from-blue-500 to-blue-400 rounded-t transition-all"
-              style={{ height: `${value}%` }}
-            />
-          ))}
-        </div>
-        <div className="text-center text-sm text-gray-600 mt-2">Last 40 seconds</div>
-      </div>
-
-      <div className="bg-white p-5 rounded-lg border border-gray-200 shadow-sm">
-        <h3 className="text-base font-semibold text-gray-800 mb-3">Memory Usage History</h3>
-        <div className="h-32 flex items-end gap-1">
-          {memoryHistory.map((value, index) => (
-            <div
-              key={index}
-              className="flex-1 bg-gradient-to-t from-green-500 to-green-400 rounded-t transition-all"
-              style={{ height: `${value}%` }}
-            />
-          ))}
-        </div>
-        <div className="text-center text-sm text-gray-600 mt-2">Last 40 seconds</div>
-      </div>
-
-      <div className="grid grid-cols-2 gap-3">
-        <div className="bg-gradient-to-br from-blue-500 to-blue-600 p-5 rounded-lg text-white shadow-sm">
-          <div className="text-sm opacity-90 mb-1">Current CPU</div>
-          <div className="text-3xl font-bold">
-            {cpuHistory[cpuHistory.length - 1]?.toFixed(1) || 0}%
-          </div>
-        </div>
-        <div className="bg-gradient-to-br from-green-500 to-green-600 p-5 rounded-lg text-white shadow-sm">
-          <div className="text-sm opacity-90 mb-1">Current Memory</div>
-          <div className="text-3xl font-bold">
-            {memoryHistory[memoryHistory.length - 1]?.toFixed(1) || 0}%
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+  const handleSort = (key: string) => {
+    setSortConfig(current => ({
+      key,
+      direction: current.key === key && current.direction === 'desc' ? 'asc' : 'desc'
+    }));
+  };
 
   return (
-    <div className="w-full h-full flex flex-col bg-white overflow-hidden">
-      {/* Toolbar with Tabs */}
-      <div className="bg-white border-b border-gray-200 px-4 py-2">
-        <div className="flex gap-1">
-          <button
-            onClick={() => setActiveTab('stats')}
-            className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
-              activeTab === 'stats'
-                ? 'bg-gray-100 text-gray-900'
-                : 'text-gray-600 hover:bg-gray-50'
-            }`}
-          >
-            Analytics
-          </button>
-          <button
-            onClick={() => setActiveTab('processes')}
-            className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
-              activeTab === 'processes'
-                ? 'bg-gray-100 text-gray-900'
-                : 'text-gray-600 hover:bg-gray-50'
-            }`}
-          >
-            Processes
-          </button>
-          <button
-            onClick={() => setActiveTab('performance')}
-            className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
-              activeTab === 'performance'
-                ? 'bg-gray-100 text-gray-900'
-                : 'text-gray-600 hover:bg-gray-50'
-            }`}
-          >
-            Performance
-          </button>
+    <div className={`flex flex-col h-full font-sans select-none ${isDark ? 'bg-[#1e1e1e] text-white' : 'bg-[#f6f6f6] text-gray-800'}`}>
+
+      {/* Toolbar */}
+      <div className={`h-12 flex items-center justify-between px-3 pb-2 pt-2 space-x-4 border-b shrink-0
+          ${isDark ? 'border-white/10' : 'border-[#D6D6D6]'}`}>
+        {/* Action Buttons */}
+        <div className={`flex space-x-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+          <ToolButton
+            icon={<FaStopCircle className="w-4 h-4" />}
+            disabled={!selectedPid || selectedPid < 1000}
+            isDark={isDark}
+            title="Force Quit"
+          />
+          <ToolButton
+            icon={<InfoCircledIcon className="w-4 h-4" />}
+            disabled={!selectedPid}
+            isDark={isDark}
+            title="Inspect"
+          />
+          <ToolButton
+            icon={<DotsHorizontalIcon className="w-4 h-4" />}
+            isDark={isDark}
+            title="More"
+          />
+        </div>
+
+        {/* Tabs */}
+        <div className={`flex p-0.5 rounded-lg border ${isDark ? 'bg-white/10 border-white/5' : 'bg-gray-200/50 border-black/5'}`}>
+          {(['CPU', 'Memory', 'Energy', 'Disk', 'Network'] as Tab[]).map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={`px-3 py-1 text-xs font-medium rounded-[5px] transition-all
+                  ${activeTab === tab
+                  ? isDark ? 'bg-gray-600 text-white shadow-sm' : 'bg-white text-black shadow-sm'
+                  : isDark ? 'bg-transparent text-gray-400 hover:text-gray-200' : 'bg-transparent text-gray-500 hover:text-gray-700'
+                }`}
+            >
+              {tab}
+            </button>
+          ))}
+        </div>
+
+        {/* Search */}
+        <div className="relative">
+          <MagnifyingGlassIcon className={`absolute left-2 top-1.5 w-3.5 h-3.5 ${isDark ? 'text-gray-400' : 'text-gray-400'}`} />
+          <input
+            type="text"
+            placeholder="Search"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className={`pl-7 pr-2 py-1 text-xs border rounded-md w-40 focus:outline-none focus:ring-2 focus:ring-blue-500/50 shadow-sm transition-all
+                ${isDark ? 'bg-black/20 border-white/10 text-white' : 'bg-white border-gray-300'}`}
+          />
         </div>
       </div>
 
-      {/* Tab Content */}
-      <div className="flex-1 overflow-auto">
-        {activeTab === 'stats' && renderStatsTab()}
-        {activeTab === 'processes' && renderProcessesTab()}
-        {activeTab === 'performance' && renderPerformanceTab()}
+      {/* Data Table */}
+      <div className={`flex-1 overflow-hidden flex flex-col relative ${isDark ? 'bg-[#1e1e1e]' : 'bg-white'}`}>
+
+        {/* Header */}
+        <div className={`h-7 border-b flex text-[11px] font-semibold uppercase tracking-wide sticky top-0 z-10 w-full
+            ${isDark ? 'bg-[#2d2d2d] border-white/10 text-gray-400' : 'bg-white border-gray-200 text-gray-500'}`}>
+          <HeaderCell label="Process Name" width="flex-[3]" sortKey="name" currentSort={sortConfig} onSort={handleSort} align="left" isDark={isDark} />
+          <HeaderCell label="% CPU" width="flex-1" sortKey="cpu" currentSort={sortConfig} onSort={handleSort} isDark={isDark} />
+          <HeaderCell label="Memory" width="flex-1" sortKey="memory" currentSort={sortConfig} onSort={handleSort} isDark={isDark} />
+          <HeaderCell label="Energy Impact" width="flex-1" sortKey="energy" currentSort={sortConfig} onSort={handleSort} isDark={isDark} />
+          <HeaderCell label="User" width="flex-1" sortKey="user" currentSort={sortConfig} onSort={handleSort} align="left" isDark={isDark} />
+          <HeaderCell label="PID" width="w-16" sortKey="pid" currentSort={sortConfig} onSort={handleSort} isDark={isDark} />
+        </div>
+
+        {/* Rows */}
+        <div className="flex-1 overflow-y-auto custom-scrollbar">
+          {sortedProcesses.map((process, idx) => (
+            <div
+              key={process.pid}
+              onClick={() => setSelectedPid(process.pid)}
+              className={`h-6 flex items-center text-[12px] border-b cursor-default px-2
+                  ${isDark ? 'border-white/5' : 'border-gray-50'}
+                  ${selectedPid === process.pid
+                  ? 'bg-[#0058D0] text-white'
+                  : idx % 2 === 0
+                    ? isDark ? 'bg-[#1e1e1e]' : 'bg-white'
+                    : isDark ? 'bg-[#252525] text-gray-300' : 'bg-[#F5F8FA] text-gray-800'
+                }
+                `}
+            >
+              <div className={`flex-[3] flex items-center pl-2 truncate font-medium ${selectedPid === process.pid ? 'text-white' : isDark ? 'text-gray-200' : 'text-gray-900'}`}>
+                <span className={`w-5 flex justify-center mr-1.5 ${selectedPid === process.pid ? 'text-white opacity-90' : 'opacity-80'}`}>
+                  {getProcessIcon(process)}
+                </span>
+                {process.name}
+                {process.type === 'system' && (
+                  <span className={`ml-1.5 text-[9px] px-1 py-0.5 rounded ${selectedPid === process.pid ? 'bg-white/20' : isDark ? 'bg-white/10 text-gray-400' : 'bg-gray-200 text-gray-500'}`}>
+                    System
+                  </span>
+                )}
+              </div>
+              <div className={`flex-1 text-right pr-4 font-mono ${process.cpu > 20 ? 'text-orange-500 font-semibold' : ''}`}>
+                {process.cpu.toFixed(1)}
+              </div>
+              <div className="flex-1 text-right pr-4">{formatMemory(process.memory)}</div>
+              <div className={`flex-1 text-right pr-4 ${process.energy > 30 ? 'text-red-500' : ''}`}>
+                {process.energy.toFixed(1)}
+              </div>
+              <div className={`flex-1 pl-2 truncate ${selectedPid === process.pid ? 'text-white opacity-90' : 'opacity-70'}`}>
+                {getProcessUser(process)}
+              </div>
+              <div className={`w-16 text-right pr-4 ${selectedPid === process.pid ? 'text-white opacity-90' : 'opacity-70'}`}>
+                {process.pid}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Bottom Graph Panel */}
+      <div className={`h-32 border-t flex p-4 shrink-0
+          ${isDark ? 'bg-[#2d2d2d] border-white/10' : 'bg-[#F6F6F6] border-[#D6D6D6]'}`}>
+
+        {/* Left Info */}
+        <div className={`w-1/3 flex flex-col space-y-1.5 pr-4 border-r ${isDark ? 'border-white/10' : 'border-gray-300'}`}>
+          <div className="flex justify-between text-xs">
+            <span className="text-gray-500 font-medium">System:</span>
+            <span className={`font-mono font-bold text-red-500`}>{totals.systemCpu} %</span>
+          </div>
+          <div className="flex justify-between text-xs">
+            <span className="text-gray-500 font-medium">User:</span>
+            <span className={`font-mono font-bold text-blue-500`}>{totals.userCpu} %</span>
+          </div>
+          <div className="flex justify-between text-xs">
+            <span className="text-gray-500 font-medium">Idle:</span>
+            <span className={`font-mono font-bold text-green-500`}>{totals.idleCpu} %</span>
+          </div>
+          <div className={`flex justify-between text-xs pt-1.5 mt-1.5 border-t ${isDark ? 'border-white/10' : 'border-gray-200'}`}>
+            <span className="text-gray-500 font-medium">Processes:</span>
+            <span className={`font-mono ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>{totals.processCount}</span>
+          </div>
+          <div className="flex justify-between text-xs">
+            <span className="text-gray-500 font-medium">Threads:</span>
+            <span className={`font-mono ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>{totals.threads}</span>
+          </div>
+        </div>
+
+        {/* Right Graph */}
+        <div className="flex-1 pl-4 flex flex-col relative">
+          <div className="flex justify-between items-center mb-1">
+            <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">CPU Load</span>
+            <div className="flex items-center gap-3 text-[9px]">
+              <span className="flex items-center gap-1">
+                <span className="w-2 h-2 bg-red-500 rounded-sm" /> System
+              </span>
+              <span className="flex items-center gap-1">
+                <span className="w-2 h-2 bg-blue-500 rounded-sm" /> User
+              </span>
+            </div>
+          </div>
+          <div className={`flex-1 rounded border overflow-hidden relative ${isDark ? 'bg-black border-gray-700' : 'bg-black border-gray-400'}`}>
+            {/* Grid Lines */}
+            <div className="absolute inset-0 grid grid-rows-4">
+              <div className="border-b border-gray-800/50" />
+              <div className="border-b border-gray-800/50" />
+              <div className="border-b border-gray-800/50" />
+            </div>
+
+            {/* Percentage Labels */}
+            <div className="absolute right-1 top-0 text-[8px] text-gray-600">100%</div>
+            <div className="absolute right-1 top-1/2 -translate-y-1/2 text-[8px] text-gray-600">50%</div>
+            <div className="absolute right-1 bottom-0 text-[8px] text-gray-600">0%</div>
+
+            {/* The Bars (User - Blue) */}
+            <div className="absolute inset-0 flex items-end justify-between px-0.5">
+              {cpuHistory.map((val, i) => (
+                <div
+                  key={i}
+                  className="w-[2%] bg-[#007AFF] transition-all duration-300 ease-linear rounded-t-[1px]"
+                  style={{ height: `${Math.min(100, val)}%`, opacity: 0.7 + (i / 100) }}
+                />
+              ))}
+            </div>
+
+            {/* Secondary "System" load overlay bars (Red) */}
+            <div className="absolute inset-0 flex items-end justify-between px-0.5 pointer-events-none">
+              {cpuHistory.map((val, i) => (
+                <div
+                  key={i}
+                  className="w-[2%] bg-[#FF3B30] transition-all duration-300 ease-linear rounded-t-[1px]"
+                  style={{ height: `${Math.min(100, val * 0.35)}%`, opacity: 0.8 }}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
 };
+
+// --- Sub-components ---
+
+const ToolButton = ({ icon, disabled, isDark, title }: { icon: React.ReactNode; disabled?: boolean; isDark: boolean; title?: string }) => (
+  <button
+    disabled={disabled}
+    title={title}
+    className={`p-1.5 rounded-md border border-transparent transition-all flex items-center justify-center ${disabled
+      ? 'opacity-30 cursor-default'
+      : isDark
+        ? 'hover:bg-white/10 hover:border-white/5 active:bg-white/20'
+        : 'hover:bg-black/5 hover:border-black/5 active:bg-black/10'
+      }`}
+  >
+    {icon}
+  </button>
+);
+
+const HeaderCell = ({ label, width, sortKey, currentSort, onSort, align = 'right', isDark }: {
+  label: string;
+  width: string;
+  sortKey: string;
+  currentSort: { key: string; direction: 'asc' | 'desc' };
+  onSort: (key: string) => void;
+  align?: 'left' | 'right';
+  isDark: boolean;
+}) => (
+  <div
+    onClick={() => onSort(sortKey)}
+    className={`${width} px-2 h-full flex items-center ${align === 'right' ? 'justify-end' : 'justify-start'} cursor-pointer transition-colors border-r last:border-0 select-none
+       ${isDark ? 'border-white/10 hover:bg-white/5' : 'border-gray-200 hover:bg-gray-100'}`}
+  >
+    <span className="truncate">{label}</span>
+    {currentSort.key === sortKey && (
+      <ChevronDownIcon className={`ml-1 w-3 h-3 transition-transform ${currentSort.direction === 'asc' ? 'rotate-180' : ''}`} />
+    )}
+  </div>
+);

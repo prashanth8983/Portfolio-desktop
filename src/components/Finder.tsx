@@ -338,11 +338,11 @@ export const Finder: React.FC<FinderProps> = ({ initialDirectory = 'recents' }) 
                     : 'bg-white'
                 }`}
             >
-                {/* Toolbar - matches sidebar header height, z-50 to be above Window drag area */}
-                <div className={`h-[52px] px-4 flex items-center justify-between border-b flex-shrink-0 relative z-50
+                {/* Toolbar - matches sidebar header height */}
+                <div className={`h-[52px] px-4 flex items-center justify-between border-b flex-shrink-0 relative
                     ${isDark ? 'border-white/5' : 'border-black/5'}`}
                 >
-                    <div className="flex items-center gap-6">
+                    <div className="flex items-center gap-6 relative z-50">
                         {/* Navigation */}
                         <div className={`flex items-center gap-3 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
                             <button
@@ -378,7 +378,7 @@ export const Finder: React.FC<FinderProps> = ({ initialDirectory = 'recents' }) 
                         </span>
                     </div>
 
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 relative z-50">
                         {/* View Switcher - Segmented Control */}
                         <div className={`flex p-0.5 rounded-lg border
                             ${isDark

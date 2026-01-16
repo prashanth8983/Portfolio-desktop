@@ -1,12 +1,15 @@
 import React from 'react';
 import ResponsiveView from './components/ResponsiveView';
 import { ThemeProvider } from './contexts/ThemeContext';
+import { ProcessProvider } from './contexts/ProcessContext';
 
 const App: React.FC = () => {
 
   return (
     <ThemeProvider>
-      <ResponsiveView />
+      <ProcessProvider>
+        <ResponsiveView />
+      </ProcessProvider>
     </ThemeProvider>
   )
 };

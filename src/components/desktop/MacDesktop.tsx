@@ -18,13 +18,22 @@ import { Calendar } from '../Calendar';
 import { Preview } from '../Preview';
 import { Window } from './Window'; // Import new component
 import { Finder } from '../Finder';
+import { Bin } from '../Bin';
+import { SystemSettings } from '../SystemSettings';
 import ProfileCard from '../ProfileCard';
+import { WorkExperienceShowcase } from '../WorkExperienceCard';
 import { useTheme } from '../../contexts/ThemeContext';
 import { ContextMenu, getDesktopContextMenu, getFileContextMenu, ContextMenuItem } from '../ContextMenu';
+import { getIconPositions, saveIconPositions } from '../../utils/session';
+import { useProcesses } from '../../contexts/ProcessContext';
 import { FaApple, FaWifi, FaBatteryFull } from 'react-icons/fa';
-import { IoBluetooth } from 'react-icons/io5';
+import { IoBluetooth, IoSettingsOutline, IoPower, IoRefresh, IoMoonOutline, IoLockClosedOutline, IoInformationCircleOutline } from 'react-icons/io5';
+import { SiAppstore } from 'react-icons/si';
 import { MagnifyingGlassIcon, SunIcon, MoonIcon } from '@radix-ui/react-icons'; // Radix Icons
 
+
+import { DesktopStickyNote, StickyNoteData } from './DesktopStickyNote';
+import { StickyNotesManager } from '../StickyNotesManager';
 
 interface MacDesktopProps {
   apps: DesktopIconType[];
@@ -34,9 +43,74 @@ interface MacDesktopProps {
 
 export const MacDesktop: React.FC<MacDesktopProps> = ({ apps, dockItems, onLock }) => {
   const { toggleTheme, isDark } = useTheme();
+  const { registerProcess, unregisterProcess } = useProcesses();
 
-  const [icons, setIcons] = useState<DesktopIconType[]>(apps);
+  // Initialize icons with saved positions from session
+  const [icons, setIcons] = useState<DesktopIconType[]>(() => {
+    const savedPositions = getIconPositions();
+    if (savedPositions.length === 0) return apps;
+
+    return apps.map(app => {
+      const savedPos = savedPositions.find(p => p.id === app.id);
+      if (savedPos) {
+        return { ...app, position: { x: savedPos.x, y: savedPos.y } };
+      }
+      return app;
+    });
+  });
+
+  // Sticky Notes State
+  const [stickyNotes, setStickyNotes] = useState<StickyNoteData[]>(() => {
+    const saved = localStorage.getItem('desktop-sticky-notes-v1');
+    if (saved) return JSON.parse(saved);
+    return [
+      { id: '1', content: '<b>Welcome to Stickies!</b><br><br>• Click the + button to add a new note.<br>• Drag the title bar to move notes.<br>• Double-click the title bar to collapse.', color: 'yellow', x: 100, y: 100, width: 300, height: 280, isCollapsed: false, zIndex: 1, lastModified: new Date().toLocaleTimeString() },
+      { id: '2', content: 'Don\'t forget to buy milk 🥛', color: 'blue', x: 450, y: 150, width: 250, height: 200, isCollapsed: false, zIndex: 2, lastModified: new Date().toLocaleTimeString() },
+      { id: '3', content: 'Meeting at 3 PM', color: 'pink', x: 150, y: 450, width: 220, height: 180, isCollapsed: true, zIndex: 3, lastModified: new Date().toLocaleTimeString() },
+    ];
+  });
+
+  useEffect(() => {
+    localStorage.setItem('desktop-sticky-notes-v1', JSON.stringify(stickyNotes));
+  }, [stickyNotes]);
+
+  const addStickyNote = () => {
+    // Calculate z-index considering both sticky notes and windows
+    const maxZ = Math.max(...stickyNotes.map(n => n.zIndex), ...windows.map(w => w.zIndex), 0);
+    const newNote: StickyNoteData = {
+      id: Date.now().toString(),
+      content: '',
+      color: 'yellow',
+      x: 300 + (stickyNotes.length * 20) % 200,
+      y: 100 + (stickyNotes.length * 20) % 300,
+      width: 280,
+      height: 250,
+      isCollapsed: false,
+      zIndex: maxZ + 1,
+      lastModified: new Date().toLocaleTimeString()
+    };
+    setStickyNotes([...stickyNotes, newNote]);
+  };
+
+  const updateStickyNote = (id: string, updates: Partial<StickyNoteData>) => {
+    setStickyNotes(stickyNotes.map(n => n.id === id ? { ...n, ...updates, lastModified: updates.content ? new Date().toLocaleTimeString() : n.lastModified } : n));
+  };
+
+  const deleteStickyNote = (id: string) => {
+    setStickyNotes(stickyNotes.filter(n => n.id !== id));
+  };
+
+  const focusStickyNote = (id: string) => {
+    const maxZ = Math.max(...stickyNotes.map(n => n.zIndex), ...windows.map(w => w.zIndex), 0);
+    setStickyNotes(stickyNotes.map(n => n.id === id ? { ...n, zIndex: maxZ + 1 } : n));
+  };
+
+  const deleteAllStickyNotes = () => {
+    setStickyNotes([]);
+  };
+
   const [windows, setWindows] = useState<WindowType[]>([]);
+  const [windowPids, setWindowPids] = useState<Map<string, number>>(new Map());
   const [nextZIndex, setNextZIndex] = useState<number>(1);
   const [draggingIcon, setDraggingIcon] = useState<string | null>(null);
   const [dragOffset, setDragOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
@@ -53,6 +127,7 @@ export const MacDesktop: React.FC<MacDesktopProps> = ({ apps, dockItems, onLock 
   );
   const [snapZone, setSnapZone] = useState<'left' | 'right' | 'top' | null>(null);
   const [isProfileOpen, setIsProfileOpen] = useState<boolean>(false);
+  const [isWorkExperienceOpen, setIsWorkExperienceOpen] = useState<boolean>(false);
   const [isSpotlightVisible, setIsSpotlightVisible] = useState<boolean>(false);
   const [contextMenu, setContextMenu] = useState<{
     isVisible: boolean;
@@ -140,10 +215,21 @@ export const MacDesktop: React.FC<MacDesktopProps> = ({ apps, dockItems, onLock 
   };
 
   const handleMouseUp = () => {
-    if (draggingIcon) setDraggingIcon(null);
+    if (draggingIcon) {
+      // Save icon positions to session when drag ends
+      const positions = icons
+        .filter(icon => icon.position)
+        .map(icon => ({
+          id: icon.id,
+          x: icon.position!.x,
+          y: icon.position!.y,
+        }));
+      saveIconPositions(positions);
+      setDraggingIcon(null);
+    }
   };
 
-  const openWindow = (type: 'browser' | 'finder' | 'pdf' | 'preview' | 'terminal' | 'projects' | 'photos' | 'mail' | 'music' | 'activity-monitor' | 'profile' | 'textedit' | 'other', title: string, pdfPath?: string, dockId?: string) => {
+  const openWindow = (type: 'browser' | 'finder' | 'pdf' | 'preview' | 'terminal' | 'projects' | 'photos' | 'mail' | 'music' | 'activity-monitor' | 'profile' | 'textedit' | 'feedback' | 'settings' | 'bin' | 'stickynotes' | 'work-experience' | 'other', title: string, pdfPath?: string, dockId?: string) => {
     // Calculate window position with offset for multiple windows
     const existingWindows = windows.filter(w => !w.isMinimized);
     const offset = existingWindows.length * 30;
@@ -152,9 +238,27 @@ export const MacDesktop: React.FC<MacDesktopProps> = ({ apps, dockItems, onLock 
 
     // Calculator has fixed dimensions
     const isCalculator = title === 'Calculator';
+    const isActivityMonitor = type === 'activity-monitor';
+
     const windowSize = isCalculator
       ? { width: 232, height: 350 }
-      : { width: 800, height: 600 };
+      : isActivityMonitor
+        ? { width: 960, height: 640 }
+        : type === 'stickynotes'
+          ? { width: 450, height: 400 }
+          : type === 'mail'
+            ? { width: 1000, height: 650 }
+            : type === 'photos'
+              ? { width: 880, height: 600 }
+              : type === 'settings'
+                ? { width: 800, height: 500 }
+                : type === 'terminal'
+                  ? { width: 600, height: 400 }
+                  : type === 'work-experience'
+                    ? { width: 950, height: 700 }
+                    : title === 'About This Mac'
+                      ? { width: 300, height: 460 }
+                      : { width: 800, height: 600 };
 
     const newWindow: WindowType = {
       id: `window-${Date.now()}`,
@@ -179,26 +283,45 @@ export const MacDesktop: React.FC<MacDesktopProps> = ({ apps, dockItems, onLock 
                   dockId === 'mac-hd' ? 'mac-hd' :
                     'recents'
             } /> :
-              type === 'terminal' ? <Terminal /> :
-                type === 'projects' ? <ProjectViewer /> :
-                  type === 'photos' ? <Gallery /> :
-                    type === 'mail' ? <Mail /> :
-                      type === 'music' ? <Music /> :
-                        type === 'activity-monitor' ? <ActivityMonitor /> :
-                          title === 'Calculator' ? <Calculator /> :
-                            type === 'textedit' ? <TextEditor /> :
-                              title === 'Calendar' ? <Calendar /> :
-                                title === 'About This Mac' ? <AboutThisMac /> :
-                                  <div>Content for {title}</div>,
+              type === 'bin' ? <Bin /> :
+                type === 'terminal' ? <Terminal /> :
+                  type === 'projects' ? <ProjectViewer /> :
+                    type === 'photos' ? <Gallery /> :
+                      type === 'mail' ? <Mail /> :
+                        type === 'settings' ? <SystemSettings /> :
+                          type === 'music' ? <Music /> :
+                            type === 'activity-monitor' ? <ActivityMonitor /> :
+                              title === 'Calculator' ? <Calculator /> :
+                                type === 'textedit' ? <TextEditor /> :
+                                  type === 'feedback' ? <TextEditor mode="feedback" /> :
+                                    type === 'stickynotes' ? <StickyNotesManager
+                                      notes={stickyNotes}
+                                      onAddNote={addStickyNote}
+                                      onDeleteNote={deleteStickyNote}
+                                      onUpdateNote={updateStickyNote}
+                                      onFocusNote={focusStickyNote}
+                                      onDeleteAllNotes={deleteAllStickyNotes}
+                                    /> :
+                                      type === 'work-experience' ? <WorkExperienceShowcase /> :
+                                        title === 'Calendar' ? <Calendar /> :
+                                          title === 'About This Mac' ? <AboutThisMac /> :
+                                            <div>Content for {title}</div>,
     };
     setWindows([...windows, newWindow]);
     setNextZIndex(nextZIndex + 1);
+
+    // Register this window as a process for Activity Monitor
+    const pid = registerProcess(title, 'user', dockId || type);
+    setWindowPids(prev => new Map(prev).set(newWindow.id, pid));
   };
 
   const handleIconDoubleClick = (icon: DesktopIconType) => {
     if (icon.type === 'pdf' && icon.content) openWindow('preview', icon.name, icon.content);
     else if (icon.type === 'app' && icon.id === 'finder') openWindow('finder', 'Finder', undefined, 'finder-dock');
     else if (icon.type === 'app' && icon.id === 'profile') setIsProfileOpen(true);
+    else if (icon.type === 'app' && icon.id === 'work-experience') setIsWorkExperienceOpen(true);
+    else if (icon.type === 'app' && icon.id === 'feedback') openWindow('feedback', 'Feedback.txt', undefined, 'feedback');
+    else if (icon.type === 'app' && icon.id === 'stickynotes') openWindow('stickynotes', 'Sticky Notes', undefined, 'stickynotes');
     else if (icon.type === 'folder' && icon.id === 'projects') openWindow('finder', 'Projects', undefined, 'projects-folder');
     else if (icon.type === 'folder' && icon.id === 'documents') openWindow('finder', 'Documents', undefined, 'documents'); // Add documents if needed in future
     else if (icon.type === 'drive') openWindow('finder', 'Macintosh HD', undefined, 'mac-hd');
@@ -219,6 +342,8 @@ export const MacDesktop: React.FC<MacDesktopProps> = ({ apps, dockItems, onLock 
   const openAppById = (id: string) => {
     if (id === 'safari') openWindow('browser', 'Safari', undefined, 'safari');
     else if (id === 'finder-dock') openWindow('finder', 'Finder', undefined, 'finder-dock');
+    else if (id === 'bin') openWindow('bin', 'Bin', undefined, 'bin');
+    else if (id === 'system-settings') openWindow('settings', 'System Settings', undefined, 'system-settings');
     else if (id === 'preview') openWindow('preview', 'Prashanth Kumar.pdf', '/Resume.pdf', 'preview');
     else if (id === 'calculator') openWindow('other', 'Calculator', undefined, 'calculator');
     else if (id === 'textedit') openWindow('textedit', 'TextEdit', undefined, 'textedit');
@@ -244,8 +369,10 @@ export const MacDesktop: React.FC<MacDesktopProps> = ({ apps, dockItems, onLock 
   };
 
   const focusWindow = (id: string) => {
-    setWindows(windows.map((w) => (w.id === id ? { ...w, zIndex: nextZIndex } : w)));
-    setNextZIndex(nextZIndex + 1);
+    // Consider both windows and sticky notes when calculating z-index
+    const maxZ = Math.max(...windows.map(w => w.zIndex), ...stickyNotes.map(n => n.zIndex), nextZIndex, 0);
+    setWindows(windows.map((w) => (w.id === id ? { ...w, zIndex: maxZ + 1 } : w)));
+    setNextZIndex(maxZ + 2);
   };
 
   const handleWindowMouseDown = (id: string, e: React.MouseEvent) => {
@@ -405,6 +532,16 @@ export const MacDesktop: React.FC<MacDesktopProps> = ({ apps, dockItems, onLock 
 
   const closeWindow = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
+    // Unregister the process from Activity Monitor
+    const pid = windowPids.get(id);
+    if (pid !== undefined) {
+      unregisterProcess(pid);
+      setWindowPids(prev => {
+        const updated = new Map(prev);
+        updated.delete(id);
+        return updated;
+      });
+    }
     setWindows(windows.filter((w) => w.id !== id));
   };
 
@@ -504,17 +641,38 @@ export const MacDesktop: React.FC<MacDesktopProps> = ({ apps, dockItems, onLock 
           >
             <FaApple size={18} />
             {activeMenu === 'apple' && (
-              <div className={`absolute top-8 left-0 w-56 backdrop-blur-xl border rounded-lg shadow-2xl py-1.5 z-[60] flex flex-col ${isDark ? 'bg-[#1e1e1e]/90 border-white/20 text-white' : 'bg-white/90 border-black/20 text-black'}`} style={{ textShadow: 'none' }}>
-                <div className={`px-3 py-1 rounded mx-1 cursor-default text-sm ${isDark ? 'hover:bg-blue-600' : 'hover:bg-blue-500 hover:text-white'}`} onClick={() => openWindow('other', 'About This Mac', undefined, 'about-mac')}>About This Mac</div>
+              <div className={`absolute top-8 left-0 w-64 backdrop-blur-xl border rounded-lg shadow-2xl py-1.5 z-[60] flex flex-col ${isDark ? 'bg-[#1e1e1e]/90 border-white/20 text-white' : 'bg-white/90 border-black/20 text-black'}`} style={{ textShadow: 'none' }}>
+                <div className={`px-3 py-1 rounded mx-1 cursor-default text-sm flex items-center gap-3 ${isDark ? 'hover:bg-blue-600' : 'hover:bg-blue-500 hover:text-white'}`} onClick={() => openWindow('other', 'About This Mac', undefined, 'about-mac')}>
+                  <IoInformationCircleOutline size={16} />
+                  <span>About This Mac</span>
+                </div>
                 <div className={`h-[1px] my-1 mx-3 ${isDark ? 'bg-white/10' : 'bg-black/10'}`} />
-                <div className={`px-3 py-1 rounded mx-1 cursor-default text-sm ${isDark ? 'hover:bg-blue-600' : 'hover:bg-blue-500 hover:text-white'}`}>System Settings...</div>
-                <div className={`px-3 py-1 rounded mx-1 cursor-default text-sm ${isDark ? 'hover:bg-blue-600' : 'hover:bg-blue-500 hover:text-white'}`}>App Store...</div>
+                <div className={`px-3 py-1 rounded mx-1 cursor-default text-sm flex items-center gap-3 ${isDark ? 'hover:bg-blue-600' : 'hover:bg-blue-500 hover:text-white'}`} onClick={() => openWindow('settings', 'System Settings', undefined, 'settings')}>
+                  <IoSettingsOutline size={16} />
+                  <span>System Settings...</span>
+                </div>
+                <div className={`px-3 py-1 rounded mx-1 cursor-default text-sm flex items-center gap-3 ${isDark ? 'hover:bg-blue-600' : 'hover:bg-blue-500 hover:text-white'}`}>
+                  <SiAppstore size={15} />
+                  <span>App Store...</span>
+                </div>
                 <div className={`h-[1px] my-1 mx-3 ${isDark ? 'bg-white/10' : 'bg-black/10'}`} />
-                <div className={`px-3 py-1 rounded mx-1 cursor-default text-sm ${isDark ? 'hover:bg-blue-600' : 'hover:bg-blue-500 hover:text-white'}`}>Sleep</div>
-                <div className={`px-3 py-1 rounded mx-1 cursor-default text-sm ${isDark ? 'hover:bg-blue-600' : 'hover:bg-blue-500 hover:text-white'}`} onClick={() => window.location.reload()}>Restart...</div>
-                <div className={`px-3 py-1 rounded mx-1 cursor-default text-sm ${isDark ? 'hover:bg-blue-600' : 'hover:bg-blue-500 hover:text-white'}`}>Shut Down...</div>
+                <div className={`px-3 py-1 rounded mx-1 cursor-default text-sm flex items-center gap-3 ${isDark ? 'hover:bg-blue-600' : 'hover:bg-blue-500 hover:text-white'}`}>
+                  <IoMoonOutline size={16} />
+                  <span>Sleep</span>
+                </div>
+                <div className={`px-3 py-1 rounded mx-1 cursor-default text-sm flex items-center gap-3 ${isDark ? 'hover:bg-blue-600' : 'hover:bg-blue-500 hover:text-white'}`} onClick={() => window.location.reload()}>
+                  <IoRefresh size={16} />
+                  <span>Restart...</span>
+                </div>
+                <div className={`px-3 py-1 rounded mx-1 cursor-default text-sm flex items-center gap-3 ${isDark ? 'hover:bg-blue-600' : 'hover:bg-blue-500 hover:text-white'}`}>
+                  <IoPower size={16} />
+                  <span>Shut Down...</span>
+                </div>
                 <div className={`h-[1px] my-1 mx-3 ${isDark ? 'bg-white/10' : 'bg-black/10'}`} />
-                <div className={`px-3 py-1 rounded mx-1 cursor-default text-sm ${isDark ? 'hover:bg-blue-600' : 'hover:bg-blue-500 hover:text-white'}`} onClick={() => { onLock(); setActiveMenu(null); }}>Lock Screen</div>
+                <div className={`px-3 py-1 rounded mx-1 cursor-default text-sm flex items-center gap-3 ${isDark ? 'hover:bg-blue-600' : 'hover:bg-blue-500 hover:text-white'}`} onClick={() => { onLock(); setActiveMenu(null); }}>
+                  <IoLockClosedOutline size={16} />
+                  <span>Lock Screen</span>
+                </div>
               </div>
             )}
           </div>
@@ -687,25 +845,55 @@ export const MacDesktop: React.FC<MacDesktopProps> = ({ apps, dockItems, onLock 
         ))}
       </div>
 
-      {/* Windows Layer */}
-      {windows.map((win) => {
-        if (win.isMinimized) return null;
-        const maxZIndex = Math.max(...windows.filter(w => !w.isMinimized).map(w => w.zIndex));
-        const isActive = win.zIndex === maxZIndex;
-        return (
-          <Window
-            key={win.id}
-            window={win}
-            isActive={isActive}
-            onClose={closeWindow}
-            onMinimize={minimizeWindow}
-            onMaximize={toggleFullscreen}
-            onFocus={focusWindow}
-            onDragStart={handleWindowMouseDown}
-            onResizeStart={handleResizeMouseDown}
+
+
+      {/* Sticky Notes Layer */}
+      {
+        stickyNotes.map((note) => (
+          <DesktopStickyNote
+            key={note.id}
+            note={note}
+            onUpdate={updateStickyNote}
+            onDelete={deleteStickyNote}
+            onFocus={focusStickyNote}
           />
-        );
-      })}
+        ))
+      }
+
+      {/* Windows Layer */}
+      {
+        windows.map((win) => {
+          if (win.isMinimized) return null;
+          const maxZIndex = Math.max(...windows.filter(w => !w.isMinimized).map(w => w.zIndex));
+          const isActive = win.zIndex === maxZIndex;
+
+          // For sticky notes, render content dynamically so it updates with state
+          const windowContent = win.type === 'stickynotes' ? (
+            <StickyNotesManager
+              notes={stickyNotes}
+              onAddNote={addStickyNote}
+              onDeleteNote={deleteStickyNote}
+              onUpdateNote={updateStickyNote}
+              onFocusNote={focusStickyNote}
+              onDeleteAllNotes={deleteAllStickyNotes}
+            />
+          ) : win.content;
+
+          return (
+            <Window
+              key={win.id}
+              window={{ ...win, content: windowContent }}
+              isActive={isActive}
+              onClose={closeWindow}
+              onMinimize={minimizeWindow}
+              onMaximize={toggleFullscreen}
+              onFocus={focusWindow}
+              onDragStart={handleWindowMouseDown}
+              onResizeStart={handleResizeMouseDown}
+            />
+          );
+        })
+      }
 
       <Dock
         dockItems={dockItems}
@@ -729,16 +917,32 @@ export const MacDesktop: React.FC<MacDesktopProps> = ({ apps, dockItems, onLock 
       />
 
       {/* Profile Card Overlay */}
-      {isProfileOpen && (
-        <div
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200"
-          onClick={() => setIsProfileOpen(false)}
-        >
-          <div onClick={(e) => e.stopPropagation()}>
-            <ProfileCard />
+      {
+        isProfileOpen && (
+          <div
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200"
+            onClick={() => setIsProfileOpen(false)}
+          >
+            <div onClick={(e) => e.stopPropagation()}>
+              <ProfileCard />
+            </div>
           </div>
-        </div>
-      )}
-    </div>
+        )
+      }
+
+      {/* Work Experience Overlay */}
+      {
+        isWorkExperienceOpen && (
+          <div
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200"
+            onClick={() => setIsWorkExperienceOpen(false)}
+          >
+            <div onClick={(e) => e.stopPropagation()} className="max-h-[90vh] overflow-auto rounded-xl">
+              <WorkExperienceShowcase />
+            </div>
+          </div>
+        )
+      }
+    </div >
   );
 };

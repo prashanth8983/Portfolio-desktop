@@ -5,6 +5,7 @@ type Theme = 'light' | 'dark';
 interface ThemeContextType {
   theme: Theme;
   toggleTheme: () => void;
+  setTheme: (theme: Theme) => void;
   isDark: boolean;
 }
 
@@ -32,6 +33,10 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
 
   const toggleTheme = () => {
     const newTheme = theme === 'light' ? 'dark' : 'light';
+    setThemeMode(newTheme);
+  };
+
+  const setThemeMode = (newTheme: Theme) => {
     setTheme(newTheme);
     localStorage.setItem('portfolio-theme', newTheme);
   };
@@ -47,6 +52,7 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
   const value = {
     theme,
     toggleTheme,
+    setTheme: setThemeMode,
     isDark,
   };
 
